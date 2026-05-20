@@ -1,0 +1,15 @@
+import { ScanFlow } from "@/components/scan-flow";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Scan Nota — BonSync",
+  description: "Foto nota struk, AI baca otomatis. Pilih sendiri semua atau split bill bareng teman.",
+};
+
+export default function ScanPage() {
+  return (
+    <div className="mx-auto max-w-md px-4 py-8 flex flex-col flex-1 min-h-0 overflow-y-auto hide-scrollbar">
+      <ScanFlow />
+    </div>
+  );
+}

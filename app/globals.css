@@ -1,0 +1,99 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-mono), ui-monospace, monospace;
+
+  /* Custom Color Palette from Image */
+  --color-emerald-50: #eef8f5;
+  --color-emerald-100: #d6eee7;
+  --color-emerald-200: #b0dfd1;
+  --color-emerald-300: #6FCF97;
+  --color-emerald-400: #4abc9c;
+  --color-emerald-500: #2FA084;
+  --color-emerald-600: #25816a;
+  --color-emerald-700: #1F6F5F;
+  --color-emerald-800: #1a5a4d;
+  --color-emerald-900: #154a40;
+  --color-emerald-950: #0c2e28;
+  
+  --color-slate-50: #EEEEEE;
+}
+
+@layer base {
+  :root {
+    --font-inter: "Inter", sans-serif;
+    --font-mono: "DM Mono", monospace;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: var(--color-slate-50);
+    color: #09090B; /* zinc-950 */
+  }
+}
+
+@layer utilities {
+  .premium-card {
+    @apply bg-white border border-slate-200/60 rounded-[24px] shadow-[0_4px_24px_rgba(0,0,0,0.02)] transition-shadow duration-300 hover:shadow-[0_8px_32px_rgba(0,0,0,0.04)];
+  }
+
+  .bento-card {
+    @apply bg-white border border-slate-200/50 rounded-3xl p-6 shadow-[0_2px_8px_rgba(0,0,0,0.02)] relative overflow-hidden;
+  }
+
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #e2e8f0;
+    border-radius: 999px;
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in-up {
+    animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    opacity: 0;
+  }
+
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Hapus arrow/spinner dari input number */
+  .no-spinner::-webkit-outer-spin-button,
+  .no-spinner::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  .no-spinner[type=number] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+}
