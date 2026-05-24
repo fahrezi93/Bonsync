@@ -32,6 +32,8 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env*.example
+.env.production.deploy
 
 # vercel
 .vercel
@@ -44,3 +46,5 @@ next-env.d.ts
 
 # scripts
 /scripts
+
+AGENTS.md

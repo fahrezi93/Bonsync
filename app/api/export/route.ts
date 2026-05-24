@@ -1,12 +1,24 @@
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/auth";
 
-function escapeCsv(value: string | number | boolean): string {
-  const str = String(value);
-  if (str.includes(",") || str.includes("\n") || str.includes("\"")) {
-    return `"${str.replace(/"/g, '""')}"`;
-  }
-  return str;
+export const dynamic = "force-dynamic";
+
+const dateFormatter = new Intl.DateTimeFormat("id-ID", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
+function escapeCsvCell(value: string | number | boolean | null | undefined) {
+  const raw = value == null ? "" : String(value);
+  const safe = /^[=+\-@\t\r]/.test(raw) ? `'${raw}` : raw;
+  return `"${safe.replace(/"/g, '""')}"`;
+}
+
+function toCsv(rows: Array<Array<string | number | boolean | null | undefined>>) {
+  return rows.map((row) => row.map(escapeCsvCell).join(",")).join("\r\n");
 }
 
 export async function GET() {
@@ -20,38 +32,61 @@ export async function GET() {
     where: { userId },
     orderBy: { date: "desc" },
     select: {
-      id: true,
       date: true,
       totalAmount: true,
       category: true,
       isSplitBill: true,
       aiAdvice: true,
       source: true,
-      receiptId: true,
+      description: true,
+      receipt: {
+        select: {
+          merchantName: true,
+          mode: true,
+          totalAmount: true,
+        },
+      },
     },
   });
 
-  const headers = ["id", "date", "totalAmount", "category", "isSplitBill", "source", "receiptId", "aiAdvice"];
-  const rows = expenses.map((e) =>
+  const rows = [
     [
-      escapeCsv(e.id),
-      escapeCsv(e.date.toISOString()),
-      escapeCsv(e.totalAmount),
-      escapeCsv(e.category),
-      escapeCsv(e.isSplitBill),
-      escapeCsv(e.source),
-      escapeCsv(e.receiptId ?? ""),
-      escapeCsv(e.aiAdvice),
-    ].join(","),
-  );
+      "Tanggal",
+      "Kategori",
+      "Sumber",
+      "Split Bill",
+      "Nama/Deskripsi",
+      "Merchant",
+      "Mode Nota",
+      "Total Nota",
+      "Nominal Dicatat",
+      "Teguran AI",
+    ],
+    ...expenses.map((expense) => [
+      dateFormatter.format(expense.date),
+      expense.category,
+      expense.source,
+      expense.isSplitBill ? "Ya" : "Tidak",
+      expense.description ?? "",
+      expense.receipt?.merchantName ?? "",
+      expense.receipt?.mode ?? "",
+      expense.receipt?.totalAmount ?? "",
+      expense.totalAmount,
+      expense.aiAdvice,
+    ]),
+  ];
 
-  const csv = [headers.join(","), ...rows].join("\n");
+  const monthFormatter = new Intl.DateTimeFormat("id-ID", { month: "long", year: "numeric" });
+  const monthName = monthFormatter.format(new Date()).replace(/\s+/g, "-");
+  const filename = `BonSync-Export-${monthName}.csv`;
+  const csv = `\uFEFF${toCsv(rows)}\r\n`;
 
   return new Response(csv, {
     status: 200,
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="dompetai-expenses.csv"`,
+      "Content-Disposition": `attachment; filename="${filename}"`,
+      "Cache-Control": "private, no-store",
     },
   });
 }

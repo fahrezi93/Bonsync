@@ -3,6 +3,11 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Receipt, Tag, Utensils, Car, ShoppingBag, Sparkles, Percent, FileText, Bell, UserCheck } from "lucide-react";
 import { requireCurrentUserId } from "@/lib/auth";
+import { EditExpenseDialog } from "@/components/edit-expense-dialog";
+import { EditReceiptDialog } from "@/components/edit-receipt-dialog";
+import { getUserCategories } from "@/actions/category-actions";
+import { getCategoryStyle } from "@/lib/categories";
+import { createClient } from "@/utils/supabase/server";
 
 const idr = new Intl.NumberFormat("id-ID", {
   style: "currency",
@@ -18,23 +23,7 @@ const dateFormatter = new Intl.DateTimeFormat("id-ID", {
   minute: "2-digit",
 });
 
-const CATEGORY_COLORS: Record<string, string> = {
-  FOOD: "bg-orange-50 text-orange-600 border-orange-200",
-  TRANSPORT: "bg-blue-50 text-blue-600 border-blue-200",
-  LIFESTYLE: "bg-purple-50 text-purple-600 border-purple-200",
-  HEALTH: "bg-emerald-50 text-emerald-600 border-emerald-200",
-  ENTERTAINMENT: "bg-pink-50 text-pink-600 border-pink-200",
-  OTHERS: "bg-slate-100 text-slate-600 border-slate-200",
-};
 
-const CATEGORY_ICONS: Record<string, React.ComponentType<any>> = {
-  FOOD: Utensils,
-  TRANSPORT: Car,
-  LIFESTYLE: ShoppingBag,
-  HEALTH: Sparkles,
-  ENTERTAINMENT: Sparkles,
-  OTHERS: Tag,
-};
 
 const SOURCE_LABELS: Record<string, string> = {
   MANUAL: "Input Manual",
@@ -56,21 +45,21 @@ function parseMarkdown(text: string): React.ReactNode {
   return parts.map((part, index) => {
     if ((part.startsWith("**") && part.endsWith("**")) || (part.startsWith("__") && part.endsWith("__"))) {
       return (
-        <strong key={index} className="font-extrabold text-amber-950">
+        <strong key={index} className="font-bold text-slate-800">
           {part.slice(2, -2)}
         </strong>
       );
     }
     if ((part.startsWith("*") && part.endsWith("*")) || (part.startsWith("_") && part.endsWith("_"))) {
       return (
-        <em key={index} className="italic font-bold text-amber-900">
+        <em key={index} className="italic text-slate-700">
           {part.slice(1, -1)}
         </em>
       );
     }
     if (part.startsWith("`") && part.endsWith("`")) {
       return (
-        <code key={index} className="px-1.5 py-0.5 rounded bg-amber-100/50 border border-amber-200/40 text-amber-950 font-mono text-[12px]">
+        <code key={index} className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-800 font-mono text-[12px]">
           {part.slice(1, -1)}
         </code>
       );
@@ -93,6 +82,25 @@ async function getExpenseDetail(id: string, userId: string) {
   return expense;
 }
 
+async function getReceiptImageSrc(imagePath: string | null | undefined) {
+  if (!imagePath) return null;
+  if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
+    return imagePath;
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.storage
+    .from("receipts")
+    .createSignedUrl(imagePath, 60 * 10);
+
+  if (error) {
+    console.error("[receipt-image] signed URL failed:", error.message);
+    return null;
+  }
+
+  return data.signedUrl;
+}
+
 export default async function ExpenseDetailPage({
   params,
 }: {
@@ -107,8 +115,10 @@ export default async function ExpenseDetailPage({
   }
 
   const receipt = expense.receipt;
-  const categoryClass = CATEGORY_COLORS[expense.category] ?? CATEGORY_COLORS.OTHERS;
-  const CategoryIcon = CATEGORY_ICONS[expense.category] ?? CATEGORY_ICONS.OTHERS;
+  const receiptImageSrc = await getReceiptImageSrc(receipt?.imageUrl);
+  const customCategories = await getUserCategories();
+  const catStyle = getCategoryStyle(expense.category, customCategories);
+  const CategoryIcon = catStyle.Icon;
 
   // Pisahkan item milik sendiri vs orang lain (untuk split bill)
   const selfItems = receipt?.items.filter((i) => i.ownerType === "SELF") ?? [];
@@ -117,14 +127,31 @@ export default async function ExpenseDetailPage({
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8 pb-32 md:pb-16 flex flex-col flex-1 h-full min-h-0 overflow-y-auto hide-scrollbar">
-      {/* Back button */}
-      <Link
-        href="/history"
-        className="group mb-6 inline-flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors p-2 -ml-2 rounded-xl hover:bg-slate-100/80 w-fit"
-      >
-        <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
-        Kembali ke Riwayat
-      </Link>
+      {/* Top Navigation */}
+      <div className="flex items-center justify-between mb-6">
+        <Link
+          href="/history"
+          className="group inline-flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors p-2 -ml-2 rounded-xl hover:bg-slate-100/80 w-fit"
+        >
+          <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
+          Kembali ke Riwayat
+        </Link>
+        
+        <EditExpenseDialog 
+          expense={{
+            id: expense.id,
+            description: expense.description,
+            totalAmount: expense.totalAmount,
+            category: expense.category
+          }}
+          customCategories={customCategories}
+          trigger={
+            <button className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900 text-xs font-bold transition-all">
+              Edit Data
+            </button>
+          }
+        />
+      </div>
 
       {/* Header card */}
       <div className="premium-card p-6 mb-6 space-y-4 animate-fade-in-up">
@@ -132,17 +159,17 @@ export default async function ExpenseDetailPage({
           <div className="space-y-3">
             <div className="flex flex-wrap gap-2">
               <span
-                className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${categoryClass}`}
+                className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-semibold ${catStyle.color}`}
               >
-                <CategoryIcon className="h-3 w-3" />
-                {expense.category}
+                <CategoryIcon className="h-4 w-4" />
+                {catStyle.label}
               </span>
-              <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-600">
-                <Receipt className="h-3 w-3" />
+              <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
+                <Receipt className="h-4 w-4" />
                 {SOURCE_LABELS[expense.source] ?? expense.source}
               </span>
             </div>
-            <p className="text-[32px] font-black tracking-tight text-slate-900 leading-none">
+            <p className="text-3xl font-bold tracking-tight text-slate-900 leading-none">
               {idr.format(expense.totalAmount)}
             </p>
             {/* Nama pengeluaran */}
@@ -151,7 +178,7 @@ export default async function ExpenseDetailPage({
                 {expense.description?.trim() || receipt?.merchantName}
               </p>
             )}
-            <p className="text-[13px] font-medium text-slate-400">
+            <p className="text-sm font-medium text-slate-500">
               {dateFormatter.format(new Date(expense.date))}
             </p>
           </div>
@@ -162,12 +189,12 @@ export default async function ExpenseDetailPage({
 
         {/* AI Advice */}
         {expense.aiAdvice && (
-          <div className="rounded-[16px] border border-amber-200 bg-amber-50/50 p-4 flex gap-3 shadow-sm">
-            <div className="shrink-0 rounded-full bg-amber-100 p-1.5 h-fit">
-              <Sparkles className="h-4 w-4 text-amber-600 animate-pulse" />
+          <div className="rounded-xl border border-slate-100 bg-slate-50 p-4 flex gap-3 mt-4">
+            <div className="shrink-0 rounded-full bg-slate-200/50 p-1.5 h-fit text-slate-500">
+              <Sparkles className="h-4 w-4" />
             </div>
-            <p className="text-[13px] leading-relaxed text-amber-900 font-medium italic whitespace-pre-line">
-              &ldquo;{parseMarkdown(expense.aiAdvice)}&rdquo;
+            <p className="text-sm leading-relaxed text-slate-600 font-medium whitespace-pre-line">
+              {parseMarkdown(expense.aiAdvice)}
             </p>
           </div>
         )}
@@ -176,21 +203,40 @@ export default async function ExpenseDetailPage({
       <div className="flex flex-col gap-4 pb-4">
         {/* Receipt detail — hanya tampil kalau ada data receipt */}
         {receipt ? (
+          <>
           <div className="premium-card overflow-hidden mb-6 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
             {/* Receipt header */}
             <div className="bg-slate-50/60 px-6 py-5 border-b border-dashed border-slate-200 rounded-t-[24px]">
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  <p className="text-xs font-semibold text-slate-500">
                     Detail Nota
                   </p>
-                  <p className="text-lg font-black text-slate-900 tracking-tight">
+                  <p className="text-lg font-bold text-slate-800 tracking-tight">
                     {receipt.merchantName}
                   </p>
                 </div>
-                <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 shadow-sm">
-                  {MODE_LABELS[receipt.mode] ?? receipt.mode}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm">
+                    {MODE_LABELS[receipt.mode] ?? receipt.mode}
+                  </span>
+                  <EditReceiptDialog
+                    expenseId={expense.id}
+                    receipt={{
+                      merchantName: receipt.merchantName,
+                      discountAmount: receipt.discountAmount,
+                      taxAmount: receipt.taxAmount,
+                      serviceChargeAmount: receipt.serviceChargeAmount,
+                      mode: receipt.mode,
+                      items: receipt.items.map((item) => ({
+                        id: item.id,
+                        itemName: item.itemName,
+                        price: item.price,
+                        ownerType: item.ownerType,
+                      })),
+                    }}
+                  />
+                </div>
               </div>
             </div>
 
@@ -200,7 +246,7 @@ export default async function ExpenseDetailPage({
                 <div className="py-2">
                   {hasSplit && (
                     <div className="pb-2.5 border-b border-slate-100 mb-3">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600 flex items-center gap-1.5">
+                      <p className="text-xs font-semibold text-emerald-600 flex items-center gap-1.5">
                         <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
                         Item Milikmu
                       </p>
@@ -228,7 +274,7 @@ export default async function ExpenseDetailPage({
               {hasSplit && otherItems.length > 0 && (
                 <div className="py-2 mt-4 pt-4 border-t border-dashed border-slate-200">
                   <div className="pb-2.5 border-b border-slate-100 mb-3">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
+                    <p className="text-xs font-semibold text-slate-500 flex items-center gap-1.5">
                       <span className="h-1.5 w-1.5 rounded-full bg-slate-300"></span>
                       Item Orang Lain
                     </p>
@@ -296,26 +342,44 @@ export default async function ExpenseDetailPage({
                 </div>
               )}
               <div className={`flex justify-between px-6 py-4.5 bg-slate-50/60 ${!hasSplit ? "rounded-b-[24px]" : ""}`}>
-                <span className="text-[14px] font-extrabold text-slate-800 tracking-tight">
+                <span className="text-sm font-bold text-slate-800 tracking-tight">
                   {hasSplit ? "Total nota penuh" : "Total"}
                 </span>
-                <span className="text-[16px] font-extrabold text-emerald-700 tracking-tight">
+                <span className="text-base font-bold text-emerald-700 tracking-tight">
                   {idr.format(receipt.totalAmount)}
                 </span>
               </div>
               {hasSplit && (
                 <div className="flex justify-between px-6 py-5 border-t border-emerald-100 bg-emerald-500/10 rounded-b-[24px]">
-                  <span className="text-[14px] font-black text-emerald-800 tracking-tight flex items-center gap-1.5">
+                  <span className="text-sm font-bold text-emerald-800 tracking-tight flex items-center gap-1.5">
                     <UserCheck className="h-4 w-4 text-emerald-600" />
                     Bagianmu
                   </span>
-                  <span className="text-[17px] font-black text-emerald-800 tracking-tight">
+                  <span className="text-base font-bold text-emerald-800 tracking-tight">
                     {idr.format(expense.totalAmount)}
                   </span>
                 </div>
               )}
             </div>
           </div>
+           
+          {/* Foto Nota */}
+          {receiptImageSrc && (
+            <div className="premium-card overflow-hidden mb-6 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+              <details className="group">
+                <summary className="flex cursor-pointer items-center justify-between bg-slate-50/60 px-6 py-5 list-none">
+                  <span className="text-sm font-semibold text-slate-800">Lihat Foto Nota</span>
+                  <span className="transition group-open:rotate-180">
+                    <svg fill="none" height="24" shapeRendering="geometricPrecision" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" viewBox="0 0 24 24" width="24" className="text-slate-500"><path d="M6 9l6 6 6-6"></path></svg>
+                  </span>
+                </summary>
+                <div className="p-4 border-t border-dashed border-slate-200 flex justify-center bg-white">
+                  <img src={receiptImageSrc} alt="Foto Nota" className="max-w-full rounded-xl shadow-sm max-h-[60vh] object-contain border border-slate-100" />
+                </div>
+              </details>
+            </div>
+          )}
+          </>
         ) : (
           /* Expense manual — tidak ada receipt */
           <div className="p-8 border-2 border-dashed border-slate-200 rounded-[24px] bg-slate-50/20 w-full animate-fade-in-up flex flex-col items-center mb-6" style={{ animationDelay: '100ms' }}>

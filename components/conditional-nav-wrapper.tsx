@@ -4,13 +4,19 @@ import { usePathname } from "next/navigation";
 
 export function ConditionalNavWrapper({
   children,
+  isAuthenticated,
 }: {
   children: React.ReactNode;
+  isAuthenticated?: boolean;
 }) {
   const pathname = usePathname();
 
-  // Hide nav entirely on auth pages
-  if (pathname === "/login" || pathname === "/register") {
+  // Hide nav entirely on auth pages or root landing page (unauthenticated)
+  if (
+    pathname === "/login" ||
+    pathname === "/register" ||
+    (pathname === "/" && !isAuthenticated)
+  ) {
     return null;
   }
 

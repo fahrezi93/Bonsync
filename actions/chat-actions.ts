@@ -4,6 +4,7 @@ import { Type } from "@google/genai";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { requireCurrentUserId } from "@/lib/auth";
+import { buildRoastPrompt } from "@/lib/roasting";
 
 /* ─── Types ─── */
 export interface ChatMessage {
@@ -256,12 +257,14 @@ export async function generateMonthlyRoasting(): Promise<string> {
 
   // Cek cache DB dulu — hanya generate ulang jika latestRoast null
   // (latestRoast di-null-kan saat ada expense baru/dihapus)
+  let cachedBudget: { latestRoast: string | null; roastLevel: string } | null = null;
   try {
-    const budget = await prisma.monthlyBudget.findUnique({
+    cachedBudget = await prisma.monthlyBudget.findUnique({
       where: { userId_month: { userId, month: monthKey } },
+      select: { latestRoast: true, roastLevel: true },
     });
-    if (budget?.latestRoast) {
-      return budget.latestRoast;
+    if (cachedBudget?.latestRoast) {
+      return cachedBudget.latestRoast;
     }
   } catch {
     // Gagal baca DB → lanjut generate
@@ -274,13 +277,7 @@ export async function generateMonthlyRoasting(): Promise<string> {
     return "Bentar, aku belum bisa mikir karena API key-nya belum dipasang. Kalau udah ada, ntar aku roasting kelakuan belanjamu bulan ini! 😎";
   }
 
-  const prompt = `Kamu adalah asisten keuangan personal yang sarkastik dan gaul tongkrongan Indonesia.
-Roasting pengeluaran user bulan ini dengan SINGKAT — maksimal 2 kalimat pendek, langsung nusuk, tidak bertele-tele.
-
-Data keuangan user:
-${summary}
-
-Hanya kembalikan teks isi roasting-nya saja. Jangan pakai tanda kutip.`;
+  const prompt = buildRoastPrompt(summary, (cachedBudget?.roastLevel as "MILD" | "MEDIUM" | "NUCLEAR") ?? "MEDIUM");
 
   try {
     const reply = await callGemini(prompt);

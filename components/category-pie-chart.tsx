@@ -6,7 +6,7 @@ interface CategoryPieChartProps {
   data: Array<{ name: string; value: number }>;
 }
 
-const COLORS = ["#0f172a", "#10b981", "#3b82f6", "#f59e0b", "#8b5cf6", "#f43f5e"];
+const COLORS = ["#059669", "#10b981", "#34d399", "#047857", "#0f172a", "#64748b"];
 
 const idr = new Intl.NumberFormat("id-ID", {
   style: "currency",
@@ -24,41 +24,43 @@ export function CategoryPieChart({ data }: CategoryPieChartProps) {
   }
 
   return (
-    <ResponsiveContainer width="100%" height="100%">
-      <PieChart>
-        <Pie 
-          data={data} 
-          dataKey="value" 
-          nameKey="name" 
-          innerRadius={48} 
-          outerRadius={75} 
-          paddingAngle={3}
-          stroke="none"
-        >
-          {data.map((entry, index) => (
-            <Cell key={entry.name} fill={COLORS[index % COLORS.length]} className="focus:outline-none hover:opacity-80 transition-opacity" />
-          ))}
-        </Pie>
-        <Tooltip
-          formatter={(value) => {
-            const numeric = typeof value === "number" ? value : Number(value ?? 0);
-            return idr.format(Number.isFinite(numeric) ? numeric : 0);
-          }}
-          contentStyle={{
-            background: "#ffffff",
-            border: "1px solid rgba(0,0,0,0.05)",
-            borderRadius: "16px",
-            color: "#0f172a",
-            boxShadow: "0 10px 25px rgba(0,0,0,0.05)"
-          }}
-          itemStyle={{
-            color: "#0f172a",
-            fontWeight: "bold",
-            fontSize: "12px"
-          }}
-        />
-      </PieChart>
-    </ResponsiveContainer>
+    <div className="w-full h-[220px] min-h-[220px] min-w-0" style={{ position: 'relative' }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
+          <Pie 
+            data={data} 
+            dataKey="value" 
+            nameKey="name" 
+            innerRadius={48} 
+            outerRadius={75} 
+            paddingAngle={3}
+            stroke="none"
+          >
+            {data.map((entry, index) => (
+              <Cell key={entry.name} fill={COLORS[index % COLORS.length]} className="focus:outline-none hover:opacity-80 transition-opacity" />
+            ))}
+          </Pie>
+          <Tooltip
+            formatter={(value) => {
+              const numeric = typeof value === "number" ? value : Number(value ?? 0);
+              return idr.format(Number.isFinite(numeric) ? numeric : 0);
+            }}
+            contentStyle={{
+              background: "#ffffff",
+              border: "1px solid rgba(0,0,0,0.05)",
+              borderRadius: "16px",
+              color: "#0f172a",
+              boxShadow: "0 10px 25px rgba(0,0,0,0.05)"
+            }}
+            itemStyle={{
+              color: "#0f172a",
+              fontWeight: "bold",
+              fontSize: "12px"
+            }}
+          />
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
   );
 }
 

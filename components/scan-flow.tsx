@@ -12,6 +12,9 @@ import {
   ArrowLeft,
   Save,
   Copy,
+  Sparkles,
+  Upload,
+  Scan,
 } from "lucide-react";
 import {
   extractReceiptDraft,
@@ -26,6 +29,7 @@ import {
 } from "@/lib/receipt-utils";
 import { useRouter } from "next/navigation";
 import { CurrencyInput } from "@/components/currency-input";
+import { createClient } from "@/utils/supabase/client";
 
 type Step = "upload" | "loading" | "review" | "split-assign" | "done";
 type Mode = "self" | "split" | null;
@@ -54,22 +58,29 @@ export function ScanFlow() {
   const [transferNote, setTransferNote] = useState("Transfer ke BCA 123456 ya!");
   const [statusMsg, setStatusMsg] = useState("");
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const [extracting, startExtract] = useTransition();
   const [saving, startSave] = useTransition();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setSelectedFile(file);
       setSelectedFileName(file.name);
       // Revoke lama kalau ada
       if (previewUrl) URL.revokeObjectURL(previewUrl);
       setPreviewUrl(URL.createObjectURL(file));
     } else {
+      setSelectedFile(null);
       setSelectedFileName(null);
       setPreviewUrl(null);
     }
+    // Reset nilai input agar file yang sama bisa dipilih ulang
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (cameraInputRef.current) cameraInputRef.current.value = "";
     setErrorMsg("");
   };
 
@@ -117,16 +128,18 @@ export function ScanFlow() {
   /* ── handlers ── */
   const handleExtract = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const file = formData.get("receipt") as File | null;
-    if (!file || file.size === 0) {
+    if (!selectedFile) {
       setErrorMsg("Pilih foto nota dulu ya.");
       return;
     }
     setErrorMsg("");
     setStep("loading");
+    
+    const finalFormData = new FormData();
+    finalFormData.append("receipt", selectedFile);
+
     startExtract(async () => {
-      const result = await extractReceiptDraft(formData);
+      const result = await extractReceiptDraft(finalFormData);
       if (!result.success || !result.data) {
         setErrorMsg(result.message ?? "Gagal membaca nota.");
         setStep("upload");
@@ -213,10 +226,60 @@ export function ScanFlow() {
     }
   };
 
+  const uploadReceiptImage = async (file: File): Promise<string | null> => {
+    try {
+      const supabase = createClient();
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        console.error("Upload auth error:", userError?.message);
+        return null;
+      }
+
+      const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]);
+      if (!allowedTypes.has(file.type)) {
+        console.error("Unsupported receipt image type:", file.type);
+        return null;
+      }
+
+      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      const filePath = `${user.id}/${crypto.randomUUID()}.${ext}`;
+      
+      const { data, error } = await supabase.storage
+        .from("receipts")
+        .upload(filePath, file, {
+          cacheControl: "3600",
+          contentType: file.type,
+          upsert: false,
+        });
+
+      if (error) {
+        console.error("Upload error:", error);
+        return null;
+      }
+
+      return data.path;
+    } catch (e) {
+      console.error("Upload exception:", e);
+      return null;
+    }
+  };
+
   const saveSelf = () => {
     if (!draft) return;
     startSave(async () => {
-      const result = await saveQuickReceiptExpense(draft);
+      let finalDraft = draft;
+      if (selectedFile) {
+        const imageUrl = await uploadReceiptImage(selectedFile);
+        if (imageUrl) {
+          finalDraft = { ...draft, imageUrl };
+        }
+      }
+
+      const result = await saveQuickReceiptExpense(finalDraft);
       if (!result.success) {
         setErrorMsg(result.message);
         return;
@@ -238,7 +301,15 @@ export function ScanFlow() {
     }
     setErrorMsg("");
     startSave(async () => {
-      const result = await saveSplitBillExpense(draft, assignments, SELF_NAME);
+      let finalDraft = draft;
+      if (selectedFile) {
+        const imageUrl = await uploadReceiptImage(selectedFile);
+        if (imageUrl) {
+          finalDraft = { ...draft, imageUrl };
+        }
+      }
+
+      const result = await saveSplitBillExpense(finalDraft, assignments, SELF_NAME);
       if (!result.success) {
         setErrorMsg(result.message);
         return;
@@ -258,86 +329,105 @@ export function ScanFlow() {
     setStatusMsg("Rincian berhasil disalin!");
   };
 
-  /* ── RENDER ── */
-
   /* Step: Upload */
   if (step === "upload") {
     return (
-      <div className="space-y-6">
-        <div className="text-center space-y-2">
-          <div className="mx-auto w-16 h-16 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center">
-            <Camera className="h-8 w-8 text-emerald-500" />
+      <div className="animate-fade-in-up pt-4 md:pt-12 max-w-xl mx-auto w-full px-4">
+        <div className="premium-card p-6 md:p-8 flex flex-col items-center text-center">
+          <div className="mb-8 flex flex-col items-center space-y-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-600 mb-2">
+              <Scan className="h-6 w-6" />
+            </div>
+            <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Scan Nota</h1>
+            <p className="text-sm text-slate-500 font-medium max-w-sm">
+              Unggah foto nota belanjamu, kami akan mengekstrak daftar item dan totalnya secara otomatis.
+            </p>
           </div>
-          <h1 className="text-xl font-bold text-slate-800">Scan Nota</h1>
-          <p className="text-sm text-slate-500">Foto nota struk, AI akan membaca itemnya otomatis</p>
-        </div>
 
-        <form onSubmit={handleExtract} className="space-y-4">
+          <form onSubmit={handleExtract} className="w-full flex flex-col items-center">
+            <input
+              ref={fileInputRef}
+              id="receipt-file"
+              name="receipt_gallery"
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+            <input
+              ref={cameraInputRef}
+              id="receipt-camera"
+              name="receipt_camera"
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={handleFileChange}
+            />
 
-          {/* File input — tersembunyi, dipicu oleh label di bawah */}
-          <input
-            ref={fileInputRef}
-            id="receipt-file"
-            name="receipt"
-            type="file"
-            accept="image/png,image/jpeg,image/webp"
-            className="hidden"
-            onChange={handleFileChange}
-          />
-
-          {/* Drop zone — label htmlFor adalah cara paling reliable cross-browser */}
-          <label
-            htmlFor="receipt-file"
-            className={`relative flex w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed transition-all ${
-              previewUrl
-                ? "border-emerald-400 bg-emerald-50"
-                : "border-slate-300 bg-slate-50 hover:border-emerald-400 hover:bg-emerald-50"
-            }`}
-            style={{ minHeight: "11rem" }}
-          >
             {previewUrl ? (
-              /* Preview gambar */
-              <>
+              <div className="w-full relative rounded-[20px] overflow-hidden bg-slate-50 border border-slate-200 aspect-[4/3] flex flex-col items-center justify-center mb-8 group">
                 <img
                   src={previewUrl}
                   alt="Preview nota"
-                  className="h-44 w-full object-contain p-2"
+                  className="w-full h-full object-contain p-2 transition-transform duration-500 group-hover:scale-[1.02]"
                 />
-                <div className="absolute bottom-0 left-0 right-0 flex items-center justify-center gap-1.5 bg-emerald-500/90 py-1.5 text-xs font-semibold text-white">
-                  <CheckCircle className="h-3.5 w-3.5" />
-                  <span className="max-w-[70%] truncate">{selectedFileName}</span>
-                  <span className="opacity-70">· Tap ganti</span>
-                </div>
-              </>
-            ) : (
-              /* Empty state */
-              <div className="flex flex-col items-center gap-3 py-8">
-                <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center">
-                  <Camera className="h-7 w-7 text-slate-400" />
-                </div>
-                <div className="text-center">
-                  <p className="text-sm font-semibold text-slate-600">Tap untuk pilih foto nota</p>
-                  <p className="text-xs text-slate-400 mt-0.5">PNG, JPG, WebP</p>
+                
+                {/* Floating Action Buttons */}
+                <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-3 px-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <label
+                    htmlFor="receipt-camera"
+                    className="cursor-pointer flex items-center justify-center gap-2 bg-white/90 backdrop-blur-md border border-slate-200 text-slate-700 hover:text-emerald-600 hover:border-emerald-300 rounded-full px-4 py-2.5 text-xs font-bold shadow-sm transition-all flex-1 max-w-[140px]"
+                  >
+                    <Camera className="w-4 h-4" /> Kamera
+                  </label>
+                  <label
+                    htmlFor="receipt-file"
+                    className="cursor-pointer flex items-center justify-center gap-2 bg-white/90 backdrop-blur-md border border-slate-200 text-slate-700 hover:text-emerald-600 hover:border-emerald-300 rounded-full px-4 py-2.5 text-xs font-bold shadow-sm transition-all flex-1 max-w-[140px]"
+                  >
+                    <Upload className="w-4 h-4" /> Galeri
+                  </label>
                 </div>
               </div>
+            ) : (
+              <div className="w-full flex gap-4 mb-8">
+                <label
+                  htmlFor="receipt-camera"
+                  className="flex-1 flex flex-col items-center justify-center gap-4 p-6 rounded-[20px] border-2 border-dashed border-slate-200 bg-slate-50 hover:bg-emerald-50 hover:border-emerald-200 cursor-pointer transition-all active:scale-95 group"
+                >
+                  <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center text-slate-400 group-hover:text-emerald-600 transition-colors">
+                    <Camera className="w-5 h-5" />
+                  </div>
+                  <span className="text-[13px] font-bold text-slate-700 group-hover:text-emerald-700">Kamera</span>
+                </label>
+                
+                <label
+                  htmlFor="receipt-file"
+                  className="flex-1 flex flex-col items-center justify-center gap-4 p-6 rounded-[20px] border-2 border-dashed border-slate-200 bg-slate-50 hover:bg-emerald-50 hover:border-emerald-200 cursor-pointer transition-all active:scale-95 group"
+                >
+                  <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center text-slate-400 group-hover:text-emerald-600 transition-colors">
+                    <Upload className="w-5 h-5" />
+                  </div>
+                  <span className="text-[13px] font-bold text-slate-700 group-hover:text-emerald-700">Galeri</span>
+                </label>
+              </div>
             )}
-          </label>
 
-          <button
-            type="submit"
-            disabled={!selectedFileName}
-            className="w-full flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-6 py-4 text-white font-bold text-base shadow-lg shadow-emerald-500/25 hover:bg-emerald-600 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-          >
-            <Camera className="h-5 w-5" />
-            Baca Nota Sekarang
-          </button>
-        </form>
+            <button
+              type="submit"
+              disabled={!selectedFileName}
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-4 font-bold text-sm transition-all active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100 disabled:cursor-not-allowed shadow-sm"
+            >
+              Lanjutkan
+            </button>
+          </form>
 
-        {errorMsg && (
-          <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-            {errorMsg}
-          </div>
-        )}
+          {errorMsg && (
+            <div className="mt-4 w-full rounded-xl border border-rose-200 bg-rose-50 px-4 py-3.5 text-xs font-bold text-rose-700 text-left animate-fade-in-up">
+              ⚠️ {errorMsg}
+            </div>
+          )}
+        </div>
       </div>
     );
   }
@@ -345,14 +435,19 @@ export function ScanFlow() {
   /* Step: Loading */
   if (step === "loading") {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 py-20 text-center animate-fade-in-up">
-        <div className="w-16 h-16 rounded-2xl bg-emerald-50 flex items-center justify-center">
-          <Loader2 className="h-8 w-8 text-emerald-500 animate-spin" />
+      <div className="flex flex-col items-center justify-center gap-6 py-24 text-center animate-fade-in-up">
+        <div className="relative">
+          <div className="absolute inset-0 rounded-[28px] bg-emerald-500/20 animate-ping" />
+          <div className="relative flex h-20 w-20 items-center justify-center rounded-[28px] bg-emerald-50 border border-emerald-100 shadow-xl shadow-emerald-500/10">
+            <Loader2 className="h-8 w-8 text-emerald-500 animate-spin" strokeWidth={2.5} />
+          </div>
         </div>
-        <p className="text-lg font-bold text-slate-800">Membaca Nota...</p>
-        <p className="text-sm text-slate-500 transition-opacity duration-300">
-          {loadingMessages[loadingMsgIdx]}
-        </p>
+        <div className="space-y-2">
+          <h2 className="text-xl font-black text-slate-800 tracking-tight">Membaca Nota...</h2>
+          <p className="text-sm font-medium text-slate-500 transition-opacity duration-300 max-w-[250px] mx-auto">
+            {loadingMessages[loadingMsgIdx]}
+          </p>
+        </div>
       </div>
     );
   }
@@ -360,146 +455,171 @@ export function ScanFlow() {
   /* Step: Review items */
   if (step === "review" && draft) {
     return (
-      <div className="space-y-5">
-        <div className="text-center space-y-1">
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Hasil Scan</p>
-          <h2 className="text-xl font-bold text-slate-800">{draft.merchantName}</h2>
-          <p className="text-sm text-slate-500">Cek daftar item — edit jika ada yang salah</p>
-        </div>
+      <div className="animate-fade-in-up pt-4 md:pt-12 max-w-5xl mx-auto w-full px-4">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+          
+          {/* Left Column: Item List & Add Button */}
+          <div className="md:col-span-7 flex flex-col gap-4 order-1">
+            <div className="px-2">
+              <h2 className="text-lg font-bold text-slate-800">Daftar Item Belanja</h2>
+              <p className="text-sm text-slate-500">Klik teks atau harga untuk mengedit jika ada yang kurang tepat.</p>
+            </div>
 
-        {/* Item list */}
-        <div className="space-y-2">
-          {draft.items.map((item, idx) => (
-            <div key={`${idx}-${item.itemName}`} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-3">
-              <input
-                value={item.itemName}
-                onChange={(e) => updateItemName(idx, e.target.value)}
-                className="flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400"
-              />
-              <CurrencyInput
-                name={`_item_price_${idx}`}
-                value={item.price}
-                onChange={(num) => updateItemPrice(idx, num)}
-                className="w-28 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400"
-              />
+            <div className="premium-card p-3 md:p-4 flex flex-col gap-2 md:gap-3">
+              {draft.items.map((item, idx) => (
+                <div 
+                  key={`${idx}-${item.itemName}`} 
+                  className="flex items-center gap-2 md:gap-3 p-2 md:p-3 rounded-[16px] border border-slate-100 hover:border-slate-200 bg-slate-50/50 hover:bg-slate-50 transition-colors group animate-fade-in-up"
+                  style={{ animationDelay: `${idx * 40}ms` }}
+                >
+                  <div className="hidden md:flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white border border-slate-200 shadow-sm text-[11px] font-bold text-slate-500">
+                    {String(idx + 1).padStart(2, "0")}
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <input
+                      value={item.itemName}
+                      onChange={(e) => updateItemName(idx, e.target.value)}
+                      className="w-full bg-transparent border-b border-transparent hover:border-slate-200 focus:border-emerald-400 focus:outline-none py-1 text-xs md:text-[13px] font-bold text-slate-800 transition-colors"
+                      placeholder="Nama item"
+                    />
+                  </div>
+
+                  <div className="flex shrink-0 items-center gap-1 bg-white border border-slate-200 rounded-lg md:rounded-xl px-2 md:px-3 py-1 md:py-1.5 focus-within:border-emerald-400 focus-within:ring-1 focus-within:ring-emerald-400 transition-all w-24 md:w-32 justify-end shadow-sm">
+                    <span className="text-[10px] md:text-[11px] font-bold text-slate-400">Rp</span>
+                    <CurrencyInput
+                      name={`_item_price_${idx}`}
+                      value={item.price}
+                      onChange={(num) => updateItemPrice(idx, num)}
+                      className="w-full bg-transparent text-right font-bold text-slate-800 text-xs md:text-sm focus:outline-none"
+                      minimal={true}
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => removeItem(idx)}
+                    className="p-1.5 md:p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-colors active:scale-90"
+                    title="Hapus Item"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+              
               <button
                 type="button"
-                onClick={() => removeItem(idx)}
-                className="rounded-lg border border-rose-100 bg-rose-50 p-2 text-rose-500 hover:bg-rose-100 transition-colors"
+                onClick={addItem}
+                className="w-full flex items-center justify-center gap-2 py-3 mt-1 md:mt-2 rounded-[16px] border-2 border-dashed border-slate-200 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-600 text-slate-500 text-xs md:text-[13px] font-bold transition-colors active:scale-[0.98]"
               >
-                <Trash2 className="h-4 w-4" />
+                <Plus className="h-4 w-4" strokeWidth={3} /> Tambah Item Baru
               </button>
             </div>
-          ))}
-        </div>
-
-        <button
-          type="button"
-          onClick={addItem}
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-500 hover:bg-slate-100 transition-colors"
-        >
-          <Plus className="h-4 w-4" /> Tambah Item
-        </button>
-
-        {/* Breakdown biaya */}
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 overflow-hidden">
-          <div className="px-4 py-2 bg-slate-100 border-b border-slate-200">
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Rincian Biaya</p>
           </div>
-          <div className="divide-y divide-slate-100">
-            {/* Subtotal items */}
-            <div className="flex items-center justify-between px-4 py-2.5">
-              <span className="text-sm text-slate-600">Subtotal item</span>
-              <span className="text-sm font-semibold text-slate-800">{idr.format(totals.subtotal)}</span>
+
+          {/* Right Column: Summary & Actions */}
+          <div className="md:col-span-5 flex flex-col gap-6 order-2">
+            <div className="px-2">
+               <h2 className="text-xl font-bold text-slate-800 tracking-tight line-clamp-1">{draft.merchantName}</h2>
+               <p className="text-sm text-slate-500">Ringkasan Tagihan</p>
             </div>
-            {/* Voucher Diskon */}
-            <div className="flex items-center gap-3 px-4 py-2">
-              <span className="text-sm text-rose-600 w-28 shrink-0">🏷 Diskon</span>
-              <div className="flex items-center gap-1 ml-auto">
-                <span className="text-sm text-rose-500">−</span>
-                <CurrencyInput
-                  name="_discount"
-                  value={draft.discount}
-                  onChange={(num) => setDraft((prev) => prev ? { ...prev, discount: Math.max(0, num) } : prev)}
-                  className="w-28 rounded-lg border border-rose-200 bg-rose-50 px-2 py-1.5 text-sm text-rose-700 font-semibold text-right focus:outline-none focus:ring-2 focus:ring-rose-400/20"
-                />
+
+            <div className="premium-card p-6 flex flex-col gap-4">
+               <div className="flex items-center justify-between text-[13px] font-semibold text-slate-500">
+                  <span>Subtotal Item</span>
+                  <span className="font-bold text-slate-800">{idr.format(totals.subtotal)}</span>
+               </div>
+
+               <div className="flex items-center justify-between text-[13px]">
+                  <span className="font-semibold text-slate-600">Diskon</span>
+                  <div className="flex shrink-0 items-center gap-1 bg-slate-50 hover:bg-white border border-slate-200 rounded-xl px-3 py-1.5 focus-within:border-emerald-400 focus-within:ring-1 focus-within:ring-emerald-400 transition-all w-32 justify-end">
+                    <span className="text-[11px] font-bold text-emerald-500">-Rp</span>
+                    <CurrencyInput
+                      name="_discount"
+                      value={draft.discount}
+                      onChange={(num) => setDraft((prev) => prev ? { ...prev, discount: Math.max(0, num) } : prev)}
+                      className="w-full bg-transparent text-right font-bold text-emerald-600 focus:outline-none"
+                      minimal={true}
+                    />
+                  </div>
+               </div>
+
+               <div className="flex items-center justify-between text-[13px]">
+                  <span className="font-semibold text-slate-600">Pajak (PPN)</span>
+                  <div className="flex shrink-0 items-center gap-1 bg-slate-50 hover:bg-white border border-slate-200 rounded-xl px-3 py-1.5 focus-within:border-emerald-400 focus-within:ring-1 focus-within:ring-emerald-400 transition-all w-32 justify-end">
+                    <span className="text-[11px] font-bold text-slate-400">+Rp</span>
+                    <CurrencyInput
+                      name="_tax"
+                      value={draft.tax}
+                      onChange={(num) => setDraft((prev) => prev ? { ...prev, tax: Math.max(0, num) } : prev)}
+                      className="w-full bg-transparent text-right font-bold text-slate-700 focus:outline-none"
+                      minimal={true}
+                    />
+                  </div>
+               </div>
+
+               <div className="flex items-center justify-between text-[13px]">
+                  <span className="font-semibold text-slate-600">Biaya Layanan</span>
+                  <div className="flex shrink-0 items-center gap-1 bg-slate-50 hover:bg-white border border-slate-200 rounded-xl px-3 py-1.5 focus-within:border-emerald-400 focus-within:ring-1 focus-within:ring-emerald-400 transition-all w-32 justify-end">
+                    <span className="text-[11px] font-bold text-slate-400">+Rp</span>
+                    <CurrencyInput
+                      name="_service"
+                      value={draft.serviceCharge}
+                      onChange={(num) => setDraft((prev) => prev ? { ...prev, serviceCharge: Math.max(0, num) } : prev)}
+                      className="w-full bg-transparent text-right font-bold text-slate-700 focus:outline-none"
+                      minimal={true}
+                    />
+                  </div>
+               </div>
+
+               <div className="h-px bg-slate-100 my-2 w-full" />
+
+               <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold text-slate-800">Total Nota</span>
+                  <span className="text-2xl font-black text-emerald-600 tracking-tight">{idr.format(totals.total)}</span>
+               </div>
+            </div>
+
+            <div className="flex flex-col gap-3 mt-2">
+               <p className="text-[13px] font-bold text-slate-800 px-2">Metode Penyimpanan</p>
+               <div className="grid grid-cols-2 gap-4">
+                 <button
+                    type="button"
+                    onClick={() => handleChooseMode("self")}
+                    disabled={saving}
+                    className="flex flex-col items-center justify-center gap-3 premium-card p-5 hover:border-emerald-400 hover:shadow-md transition-all disabled:opacity-50 active:scale-95"
+                 >
+                    <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                       <User className="w-5 h-5" />
+                    </div>
+                    <span className="text-[13px] font-bold text-slate-700">Milikku Semua</span>
+                 </button>
+                 <button
+                    type="button"
+                    onClick={() => handleChooseMode("split")}
+                    className="flex flex-col items-center justify-center gap-3 premium-card p-5 hover:border-emerald-400 hover:shadow-md transition-all active:scale-95"
+                 >
+                    <div className="w-12 h-12 rounded-full bg-slate-50 text-slate-600 flex items-center justify-center">
+                       <Users className="w-5 h-5" />
+                    </div>
+                    <span className="text-[13px] font-bold text-slate-700">Bagi Tagihan</span>
+                 </button>
+               </div>
+            </div>
+
+            {saving && (
+              <div className="flex items-center justify-center gap-2 py-4 text-sm font-semibold text-slate-500 animate-pulse">
+                <Loader2 className="h-4 w-4 animate-spin text-emerald-500" /> Menyimpan data...
               </div>
-            </div>
-            {/* Pajak */}
-            <div className="flex items-center gap-3 px-4 py-2">
-              <span className="text-sm text-amber-700 w-28 shrink-0">📋 Pajak</span>
-              <div className="flex items-center gap-1 ml-auto">
-                <span className="text-sm text-amber-600">+</span>
-                <CurrencyInput
-                  name="_tax"
-                  value={draft.tax}
-                  onChange={(num) => setDraft((prev) => prev ? { ...prev, tax: Math.max(0, num) } : prev)}
-                  className="w-28 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1.5 text-sm text-amber-700 font-semibold text-right focus:outline-none focus:ring-2 focus:ring-amber-400/20"
-                />
+            )}
+
+            {errorMsg && (
+              <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3.5 text-xs font-bold text-rose-700 animate-fade-in-up">
+                ⚠️ {errorMsg}
               </div>
-            </div>
-            {/* Biaya tambahan */}
-            <div className="flex items-center gap-3 px-4 py-2">
-              <span className="text-sm text-sky-700 w-28 shrink-0 leading-tight">🛎 Biaya lain<br/><span className="text-xs font-normal text-sky-500">(layanan+pack)</span></span>
-              <div className="flex items-center gap-1 ml-auto">
-                <span className="text-sm text-sky-600">+</span>
-                <CurrencyInput
-                  name="_service"
-                  value={draft.serviceCharge}
-                  onChange={(num) => setDraft((prev) => prev ? { ...prev, serviceCharge: Math.max(0, num) } : prev)}
-                  className="w-28 rounded-lg border border-sky-200 bg-sky-50 px-2 py-1.5 text-sm text-sky-700 font-semibold text-right focus:outline-none focus:ring-2 focus:ring-sky-400/20"
-                />
-              </div>
-            </div>
-            {/* Total */}
-            <div className="flex items-center justify-between px-4 py-3 bg-white">
-              <span className="text-sm font-bold text-slate-800">Total</span>
-              <span className="text-lg font-bold text-emerald-700">{idr.format(totals.total)}</span>
-            </div>
+            )}
           </div>
         </div>
-        <p className="text-xs text-slate-400 text-center -mt-2">Tap angka untuk koreksi jika AI salah baca</p>
-
-
-        {/* Mode picker */}
-        <div className="space-y-3 pt-2 border-t border-slate-100">
-          <p className="text-sm font-semibold text-slate-700 text-center">
-            Nota ini milikmu semua, atau bareng teman?
-          </p>
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => handleChooseMode("self")}
-              disabled={saving}
-              className="flex flex-col items-center gap-2 rounded-2xl border-2 border-slate-200 bg-white px-4 py-5 font-semibold text-slate-700 hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-700 active:scale-95 transition-all disabled:opacity-60"
-            >
-              <User className="h-7 w-7" />
-              <span className="text-sm">Milikku Semua</span>
-              <span className="text-xs text-slate-400 font-normal">{idr.format(totals.total)} masuk</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleChooseMode("split")}
-              className="flex flex-col items-center gap-2 rounded-2xl border-2 border-slate-200 bg-white px-4 py-5 font-semibold text-slate-700 hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-700 active:scale-95 transition-all"
-            >
-              <Users className="h-7 w-7" />
-              <span className="text-sm">Split Bill</span>
-              <span className="text-xs text-slate-400 font-normal">Pilih item milikmu</span>
-            </button>
-          </div>
-        </div>
-
-        {saving && (
-          <div className="flex items-center justify-center gap-2 py-2 text-sm text-slate-500">
-            <Loader2 className="h-4 w-4 animate-spin" /> Menyimpan...
-          </div>
-        )}
-
-        {errorMsg && (
-          <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-            {errorMsg}
-          </div>
-        )}
       </div>
     );
   }
@@ -507,198 +627,198 @@ export function ScanFlow() {
   /* Step: Split assign */
   if (step === "split-assign" && draft) {
     return (
-      <div className="space-y-5">
-        <button
-          type="button"
-          onClick={() => setStep("review")}
-          className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-800 transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" /> Kembali
-        </button>
-
-        <div className="text-center space-y-2">
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Split Bill</p>
-          <h2 className="text-xl font-bold text-slate-800">{draft.merchantName}</h2>
-          {/* Badge diskon / pajak / service */}
-          <div className="flex flex-wrap justify-center gap-1.5">
-            {draft.discount > 0 && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-semibold text-rose-600">
-                🏷 Diskon {idr.format(draft.discount)}
-              </span>
-            )}
-            {draft.tax > 0 && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
-                📋 PPN {idr.format(draft.tax)}
-              </span>
-            )}
-            {draft.serviceCharge > 0 && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-semibold text-sky-700">
-                🛎 Service {idr.format(draft.serviceCharge)}
-              </span>
-            )}
-            {draft.discount === 0 && draft.tax === 0 && draft.serviceCharge === 0 && (
-              <span className="text-xs text-slate-400">Tandai item milik siapa saja</span>
-            )}
+      <div className="animate-fade-in-up pt-4 md:pt-12 max-w-5xl mx-auto w-full px-4">
+        <div className="flex items-center gap-3 mb-6">
+          <button
+            type="button"
+            onClick={() => setStep("review")}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-500 transition-colors active:scale-95"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <div className="min-w-0">
+            <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono">Split Bill</p>
+            <h2 className="text-lg font-bold text-slate-800 leading-tight truncate">{draft.merchantName}</h2>
           </div>
         </div>
 
-        {/* Friend management */}
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-3">
-          <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Partisipan</p>
-          <div className="flex flex-wrap gap-2">
-            <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
-              {SELF_NAME} (kamu)
-            </span>
-            {friends.map((f) => (
-              <button
-                key={f}
-                type="button"
-                onClick={() => removeFriend(f)}
-                className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-rose-50 hover:border-rose-200 hover:text-rose-600 transition-colors"
-              >
-                {f} ×
-              </button>
-            ))}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+          {/* Left Column: Item assignment */}
+          <div className="md:col-span-7 flex flex-col gap-4 order-2 md:order-1">
+            <div className="px-2">
+              <h2 className="text-lg font-bold text-slate-800">Bagi Tagihan</h2>
+              <p className="text-sm text-slate-500">Pilih siapa saja yang patungan untuk tiap item.</p>
+            </div>
+            
+            <div className="premium-card p-3 md:p-4 flex flex-col gap-3">
+            {draft.items.map((item, idx) => {
+              const owners = assignments[idx] ?? [];
+              const perOwner = owners.length > 0 ? item.price / owners.length : 0;
+              const unassigned = owners.length === 0;
+              return (
+                <div key={`${idx}-${item.itemName}`} className={`rounded-[16px] border p-3.5 space-y-3 transition-colors ${unassigned ? "border-amber-200/60 bg-amber-50/30" : "border-slate-100 bg-slate-50/30 hover:border-slate-200"}`}>
+                  <div className="flex justify-between items-start gap-3">
+                    <span className="text-[13px] font-bold text-slate-800 leading-snug">{item.itemName}</span>
+                    <span className="text-[13px] font-black text-slate-800 shrink-0">{idr.format(item.price)}</span>
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-2">
+                    {participants.map((name) => {
+                      const selected = owners.includes(name);
+                      return (
+                        <button
+                          key={`${idx}-${name}`}
+                          type="button"
+                          onClick={() => toggleOwner(idx, name)}
+                          className={`rounded-xl px-3 py-1.5 text-[11px] font-bold transition-all cursor-pointer select-none active:scale-95 ${
+                            selected
+                              ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/20 border border-emerald-500"
+                              : "border border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                          }`}
+                        >
+                          {name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {owners.length > 0 && (
+                    <div className="pt-1 flex items-center gap-1.5 text-[11px] font-bold text-slate-400">
+                      <div className="w-1 h-1 rounded-full bg-slate-300" />
+                      <span>{idr.format(perOwner)} per orang ({owners.length})</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            </div>
           </div>
-          <div className="flex gap-2">
-            <input
-              value={friendInput}
-              onChange={(e) => setFriendInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && addFriend()}
-              placeholder="Nama teman (Enter)"
-              className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400"
-            />
-            <button
-              type="button"
-              onClick={addFriend}
-              className="rounded-xl bg-slate-800 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-900"
-            >
-              <Plus className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
 
-        {/* Item assignment */}
-        <div className="space-y-2">
-          {draft.items.map((item, idx) => {
-            const owners = assignments[idx] ?? [];
-            const perOwner = owners.length > 0 ? item.price / owners.length : 0;
-            const unassigned = owners.length === 0;
-            return (
-              <div key={`${idx}-${item.itemName}`} className={`rounded-xl border p-3 space-y-2 ${unassigned ? "border-amber-200 bg-amber-50" : "border-slate-200 bg-white"}`}>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-slate-800">{item.itemName}</span>
-                  <span className="text-sm font-bold text-slate-700">{idr.format(item.price)}</span>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {participants.map((name) => {
-                    const selected = owners.includes(name);
-                    return (
-                      <button
-                        key={`${idx}-${name}`}
-                        type="button"
-                        onClick={() => toggleOwner(idx, name)}
-                        className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
-                          selected
-                            ? "bg-emerald-500 text-white"
-                            : "border border-slate-300 bg-slate-50 text-slate-700 hover:bg-slate-100"
-                        }`}
-                      >
-                        {name}
-                      </button>
-                    );
-                  })}
-                </div>
-                {owners.length > 0 && (
-                  <p className="text-xs text-slate-500">
-                    {idr.format(perOwner)} per orang ({owners.length} orang)
-                  </p>
-                )}
+          {/* Right Column: Friends, summary, transfer note & save actions */}
+          <div className="md:col-span-5 flex flex-col gap-6 order-1 md:order-2">
+            
+            {/* Friend management */}
+            <div className="premium-card p-5 space-y-4">
+              <p className="text-[11px] font-black uppercase tracking-wider text-slate-400 font-mono">Daftar Partisipan</p>
+              
+              <div className="flex flex-wrap gap-2">
+                <span className="rounded-xl bg-emerald-50 px-3 py-1.5 text-[11px] font-bold text-emerald-700 border border-emerald-100">
+                  {SELF_NAME} (kamu)
+                </span>
+                {friends.map((f) => (
+                  <button
+                    key={f}
+                    type="button"
+                    onClick={() => removeFriend(f)}
+                    className="group rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-bold text-slate-600 hover:bg-rose-50 hover:border-rose-200 hover:text-rose-600 transition-colors cursor-pointer select-none animate-fade-in-up flex items-center gap-1"
+                  >
+                    <span>{f}</span>
+                    <span className="text-slate-400 group-hover:text-rose-500">×</span>
+                  </button>
+                ))}
               </div>
-            );
-          })}
-        </div>
-
-        {/* Summary bagianku — breakdown transparan */}
-        {selfTotal > 0 && (() => {
-          const selfLine = split.participants.find((p) => p.name === SELF_NAME);
-          if (!selfLine) return null;
-          const hasAdjustments = selfLine.discountShare > 0 || selfLine.taxShare > 0 || selfLine.serviceShare > 0;
-          return (
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 space-y-2">
-              <p className="text-xs font-bold uppercase tracking-wider text-emerald-600">Bagianmu</p>
-              <div className="space-y-1.5">
-                <div className="flex justify-between text-sm text-slate-700">
-                  <span>Subtotal item</span>
-                  <span className="font-medium">{idr.format(selfLine.subtotal)}</span>
-                </div>
-                {selfLine.discountShare > 0 && (
-                  <div className="flex justify-between text-sm text-rose-600">
-                    <span>Potongan diskon</span>
-                    <span className="font-medium">− {idr.format(selfLine.discountShare)}</span>
-                  </div>
-                )}
-                {selfLine.taxShare > 0 && (
-                  <div className="flex justify-between text-sm text-amber-700">
-                    <span>PPN (proporsional)</span>
-                    <span className="font-medium">+ {idr.format(selfLine.taxShare)}</span>
-                  </div>
-                )}
-                {selfLine.serviceShare > 0 && (
-                  <div className="flex justify-between text-sm text-sky-700">
-                    <span>Service charge</span>
-                    <span className="font-medium">+ {idr.format(selfLine.serviceShare)}</span>
-                  </div>
-                )}
-                {hasAdjustments && (
-                  <div className="border-t border-emerald-200 pt-1.5" />
-                )}
-                <div className="flex justify-between">
-                  <span className="text-sm font-bold text-emerald-800">Total bayarmu</span>
-                  <span className="text-lg font-bold text-emerald-800">{idr.format(selfLine.total)}</span>
-                </div>
+              
+              <div className="flex gap-2">
+                <input
+                  value={friendInput}
+                  onChange={(e) => setFriendInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && addFriend()}
+                  placeholder="Ketik nama teman (Enter)"
+                  className="flex-1 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white px-3.5 py-2.5 text-[13px] font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-colors"
+                />
+                <button
+                  type="button"
+                  onClick={addFriend}
+                  className="rounded-xl bg-slate-800 px-4 py-2.5 text-white hover:bg-slate-900 transition-colors flex items-center justify-center cursor-pointer select-none active:scale-95"
+                >
+                  <Plus className="h-4 w-4" strokeWidth={3} />
+                </button>
               </div>
             </div>
-          );
-        })()}
 
-        {/* Transfer note */}
-        <input
-          value={transferNote}
-          onChange={(e) => setTransferNote(e.target.value)}
-          placeholder="Catatan transfer (opsional)"
-          className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400"
-        />
+            {/* Summary bagianku */}
+            {selfTotal > 0 && (() => {
+              const selfLine = split.participants.find((p) => p.name === SELF_NAME);
+              if (!selfLine) return null;
+              const hasAdjustments = selfLine.discountShare > 0 || selfLine.taxShare > 0 || selfLine.serviceShare > 0;
+              return (
+                <div className="premium-card p-5 space-y-3 animate-fade-in-up bg-emerald-50/30 border-emerald-100">
+                  <p className="text-[11px] font-black uppercase tracking-wider text-emerald-600 font-mono">Bagianmu (Proporsional)</p>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-[13px] font-bold text-slate-600">
+                      <span>Subtotal Item</span>
+                      <span className="text-slate-800">{idr.format(selfLine.subtotal)}</span>
+                    </div>
+                    {selfLine.discountShare > 0 && (
+                      <div className="flex justify-between text-[13px] font-bold text-emerald-600">
+                        <span>Diskon (proporsional)</span>
+                        <span>− {idr.format(selfLine.discountShare)}</span>
+                      </div>
+                    )}
+                    {selfLine.taxShare > 0 && (
+                      <div className="flex justify-between text-[13px] font-bold text-slate-500">
+                        <span>PPN (proporsional)</span>
+                        <span>+ {idr.format(selfLine.taxShare)}</span>
+                      </div>
+                    )}
+                    {selfLine.serviceShare > 0 && (
+                      <div className="flex justify-between text-[13px] font-bold text-slate-500">
+                        <span>Service (proporsional)</span>
+                        <span>+ {idr.format(selfLine.serviceShare)}</span>
+                      </div>
+                    )}
+                    {hasAdjustments && (
+                      <div className="border-t border-emerald-100 my-2" />
+                    )}
+                    <div className="flex justify-between items-center pt-1">
+                      <span className="text-[13px] font-black text-slate-800">Total Bayarmu</span>
+                      <span className="text-xl font-black text-emerald-600 tracking-tight">{idr.format(selfLine.total)}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
-        <div className="grid grid-cols-2 gap-3">
-          <button
-            type="button"
-            onClick={copyBilling}
-            className="flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
-          >
-            <Copy className="h-4 w-4" /> Salin Tagihan
-          </button>
-          <button
-            type="button"
-            onClick={saveSplit}
-            disabled={saving}
-            className="flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-emerald-500/25 hover:bg-emerald-600 disabled:opacity-60 active:scale-95 transition-all"
-          >
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            Simpan Bagianku
-          </button>
+            {/* Actions */}
+            <div className="space-y-3">
+              <input
+                value={transferNote}
+                onChange={(e) => setTransferNote(e.target.value)}
+                placeholder="Catatan rekening/transfer (opsional)"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white px-4 py-3 text-[13px] font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-colors"
+              />
+
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={copyBilling}
+                  className="flex items-center justify-center gap-2 premium-card px-4 py-3.5 text-[13px] font-bold text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-all cursor-pointer select-none active:scale-95"
+                >
+                  <Copy className="h-4 w-4" /> Salin Tagihan
+                </button>
+                <button
+                  type="button"
+                  onClick={saveSplit}
+                  disabled={saving}
+                  className="flex items-center justify-center gap-2 rounded-[20px] bg-emerald-500 border border-emerald-400 px-4 py-3.5 text-[13px] font-bold text-white shadow-lg shadow-emerald-500/25 hover:bg-emerald-600 disabled:opacity-60 active:scale-95 transition-all cursor-pointer select-none"
+                >
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                  Simpan Bagianku
+                </button>
+              </div>
+            </div>
+
+            {errorMsg && (
+              <div className="rounded-2xl border border-rose-200 bg-rose-50/80 px-4 py-3.5 text-xs font-bold text-rose-700 animate-fade-in-up">
+                ⚠️ {errorMsg}
+              </div>
+            )}
+            {statusMsg && (
+              <div className="rounded-2xl border border-emerald-100 bg-emerald-50/80 px-4 py-3.5 text-xs font-bold text-emerald-800 animate-fade-in-up">
+                ✅ {statusMsg}
+              </div>
+            )}
+          </div>
         </div>
-
-        {errorMsg && (
-          <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-            {errorMsg}
-          </div>
-        )}
-        {statusMsg && (
-          <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-            {statusMsg}
-          </div>
-        )}
       </div>
     );
   }
@@ -706,7 +826,7 @@ export function ScanFlow() {
   /* Step: Done */
   if (step === "done") {
     return (
-      <div className="flex flex-col items-center justify-center gap-5 py-16 text-center">
+      <div className="flex flex-col items-center justify-center gap-5 py-16 text-center pt-4 md:pt-12">
         <div className="w-20 h-20 rounded-full bg-emerald-50 flex items-center justify-center">
           <CheckCircle className="h-10 w-10 text-emerald-500" />
         </div>

@@ -9,9 +9,9 @@
  * 1. DB cache (kolom latestRoast di MonthlyBudget):
  *    - Roast disimpan ke DB setelah berhasil di-generate.
  *    - latestRoast di-null-kan HANYA saat ada expense baru/dihapus
- *      (expense-actions.ts & chat-actions.ts).
+ *      (expense-actions.ts & chat-actions.ts) atau saat roastLevel berubah.
  *    - Membuka/menutup halaman tanpa perubahan expense → selalu pakai cache DB.
- *    - AI HANYA dipanggil ulang jika pengeluaran berubah.
+ *    - AI HANYA dipanggil ulang jika pengeluaran/level berubah.
  *
  * 2. React.cache() (per-request memoization):
  *    - Dalam 1 render request, DB hanya di-query sekali meski fungsi dipanggil
@@ -21,6 +21,8 @@
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { generateContentWithFallback } from "@/lib/ai-fallback";
+
+export type RoastLevel = "MILD" | "MEDIUM" | "NUCLEAR";
 
 async function buildExpenseSummary(userId: string, monthKey: string): Promise<string> {
   const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
@@ -52,6 +54,41 @@ async function buildExpenseSummary(userId: string, monthKey: string): Promise<st
   );
 }
 
+export function buildRoastPrompt(summary: string, level: RoastLevel): string {
+  const baseData = `Data keuangan user:\n${summary}`;
+
+  switch (level) {
+    case "MILD":
+      return `Kamu adalah konsultan keuangan yang ramah, sopan, dan suportif.
+Berikan evaluasi pengeluaran user bulan ini dengan nada yang membangun — maksimal 2 kalimat pendek.
+Gunakan bahasa Indonesia yang hangat, tidak menyinggung, dan tetap informatif.
+Tambahkan 1 emoji positif yang relevan di akhir.
+
+${baseData}
+
+Hanya kembalikan teks evaluasinya saja. Jangan pakai tanda kutip.`;
+
+    case "MEDIUM":
+      return `Kamu adalah asisten keuangan personal yang sarkastik dan gaul tongkrongan Indonesia.
+Roasting pengeluaran user bulan ini dengan SINGKAT — maksimal 2 kalimat pendek, langsung nusuk, tidak bertele-tele.
+Gunakan bahasa gaul Indonesia yang sarkastik tapi masih lucu dan tidak kasar.
+
+${baseData}
+
+Hanya kembalikan teks isi roasting-nya saja. Jangan pakai tanda kutip.`;
+
+    case "NUCLEAR":
+      return `Kamu adalah "Hakim Keuangan" yang tidak punya empati sama sekali dan jujur brutal.
+Roasting pengeluaran user ini dengan level MAKSIMAL — blak-blakan, pedas, tidak ada basa-basi, tidak ada kata penyemangat.
+Gunakan bahasa gaul Indonesia yang keras, cerdas, dan menohok. Maksimal 2-3 kalimat yang bikin malu.
+Jangan kasih saran baik-baik — cukup sampaikan kenyataan pahitnya saja dengan cara yang epic.
+
+${baseData}
+
+Hanya kembalikan teks isi roasting-nya saja. Jangan pakai tanda kutip.`;
+  }
+}
+
 /**
  * Ambil teks roasting untuk user bulan ini.
  *
@@ -61,17 +98,22 @@ async function buildExpenseSummary(userId: string, monthKey: string): Promise<st
  * Dibungkus React.cache() supaya per-request hanya 1x eksekusi.
  */
 export const getMonthlyRoasting = cache(
-  async (userId: string, monthKey: string): Promise<string> => {
+  async (userId: string, monthKey: string): Promise<{ text: string; level: RoastLevel }> => {
     // ── Layer 1: cek DB cache ──
+    let currentLevel: RoastLevel = "MEDIUM";
     try {
       const budget = await prisma.monthlyBudget.findUnique({
         where: { userId_month: { userId, month: monthKey } },
-        select: { latestRoast: true },
+        select: { latestRoast: true, roastLevel: true },
       });
+
+      if (budget?.roastLevel) {
+        currentLevel = budget.roastLevel as RoastLevel;
+      }
 
       if (budget?.latestRoast) {
         // Cache hit → return langsung tanpa panggil AI sama sekali
-        return budget.latestRoast;
+        return { text: budget.latestRoast, level: currentLevel };
       }
     } catch {
       // Gagal baca DB → lanjut ke generate
@@ -80,7 +122,10 @@ export const getMonthlyRoasting = cache(
     // ── Layer 2: cache miss → generate AI ──
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return "Bentar, aku belum bisa mikir karena API key-nya belum dipasang. Kalau udah ada, ntar aku roasting kelakuan belanjamu bulan ini! 😎";
+      return {
+        text: "Bentar, aku belum bisa mikir karena API key-nya belum dipasang. Kalau udah ada, ntar aku roasting kelakuan belanjamu bulan ini! 😎",
+        level: currentLevel,
+      };
     }
 
     let summary: string;
@@ -90,13 +135,7 @@ export const getMonthlyRoasting = cache(
       summary = "Gagal mengambil data pengeluaran.";
     }
 
-    const prompt = `Kamu adalah asisten keuangan personal yang sarkastik dan gaul tongkrongan Indonesia.
-Roasting pengeluaran user bulan ini dengan SINGKAT — maksimal 2 kalimat pendek, langsung nusuk, tidak bertele-tele.
-
-Data keuangan user:
-${summary}
-
-Hanya kembalikan teks isi roasting-nya saja. Jangan pakai tanda kutip.`;
+    const prompt = buildRoastPrompt(summary, currentLevel);
 
     try {
       const res = await generateContentWithFallback({
@@ -116,9 +155,12 @@ Hanya kembalikan teks isi roasting-nya saja. Jangan pakai tanda kutip.`;
         // Gagal tulis cache → tidak masalah, roast tetap ditampilkan
       }
 
-      return roast;
+      return { text: roast, level: currentLevel };
     } catch {
-      return "Waduh, AI-nya lagi nge-blank karena bon kamu kebanyakan. Coba lagi bentar ya!";
+      return {
+        text: "Waduh, AI-nya lagi nge-blank karena bon kamu kebanyakan. Coba lagi bentar ya!",
+        level: currentLevel,
+      };
     }
   }
 );

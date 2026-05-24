@@ -1,0 +1,76 @@
+# BonSync — Cloud Run Deployment via Cloud Build
+# Trigger: manual or git push to main branch
+#
+# Usage:
+#   gcloud builds submit --config cloudbuild.yaml \
+#     --substitutions=_REGION=asia-southeast2 .
+
+steps:
+  # ── Step 1: Build Docker image ──────────────────────────────────────────────
+  - name: 'gcr.io/cloud-builders/docker'
+    id: build
+    args:
+      - 'build'
+      - '--platform'
+      - 'linux/amd64'
+      - '--build-arg'
+      - 'NEXT_PUBLIC_SUPABASE_URL=${_NEXT_PUBLIC_SUPABASE_URL}'
+      - '--build-arg'
+      - 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=${_NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY}'
+      - '--build-arg'
+      - 'NEXT_PUBLIC_SITE_URL=${_NEXT_PUBLIC_SITE_URL}'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/bonsync-app:latest'
+      - '.'
+
+  # ── Step 2: Push image ──────────────────────────────────────────────────────
+  - name: 'gcr.io/cloud-builders/docker'
+    id: push
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/bonsync-app:latest'
+    waitFor: ['build']
+
+  # ── Step 3: Deploy to Cloud Run ─────────────────────────────────────────────
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
+    id: deploy
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'bonsync-app'
+      - '--image=gcr.io/$PROJECT_ID/bonsync-app:latest'
+      - '--region=${_REGION}'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+      - '--port=8080'
+      - '--memory=512Mi'
+      - '--cpu=1'
+      - '--min-instances=0'
+      - '--max-instances=10'
+      - '--timeout=60'
+      - '--set-env-vars=NODE_ENV=production'
+      - '--set-env-vars=NEXT_TELEMETRY_DISABLED=1'
+      - '--set-env-vars=DATABASE_URL=${_DATABASE_URL}'
+      - '--set-env-vars=NEXT_PUBLIC_SUPABASE_URL=${_NEXT_PUBLIC_SUPABASE_URL}'
+      - '--set-env-vars=NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=${_NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY}'
+      - '--set-env-vars=NEXT_PUBLIC_SITE_URL=${_NEXT_PUBLIC_SITE_URL}'
+      - '--set-env-vars=GEMINI_API_KEY=${_GEMINI_API_KEY}'
+      - '--quiet'
+    waitFor: ['push']
+
+# Substitution defaults (override with --substitutions flag)
+substitutions:
+  _REGION: asia-southeast2
+  _NEXT_PUBLIC_SUPABASE_URL: ''
+  _NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ''
+  _NEXT_PUBLIC_SITE_URL: ''
+  _DATABASE_URL: ''
+  _GEMINI_API_KEY: ''
+
+images:
+  - 'gcr.io/$PROJECT_ID/bonsync-app:latest'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: 'E2_MEDIUM'

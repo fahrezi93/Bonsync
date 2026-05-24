@@ -5,8 +5,11 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { HistoryFilters } from "@/components/history-filters";
 import { HistoryPagination } from "@/components/history-pagination";
+import { EditExpenseDialog } from "@/components/edit-expense-dialog";
 import { requireCurrentUserId } from "@/lib/auth";
 import type { Prisma } from "@prisma/client";
+import { getUserCategories } from "@/actions/category-actions";
+import { getCategoryStyle } from "@/lib/categories";
 
 const idr = new Intl.NumberFormat("id-ID", {
   style: "currency",
@@ -22,32 +25,11 @@ const dateFormatter = new Intl.DateTimeFormat("id-ID", {
   minute: "2-digit",
 });
 
-const CATEGORY_CONFIG: Record<string, { color: string; label: string }> = {
-  FOOD:          { color: "bg-orange-50 text-orange-600 border-orange-200",    label: "Makanan" },
-  TRANSPORT:     { color: "bg-blue-50 text-blue-600 border-blue-200",          label: "Transport" },
-  LIFESTYLE:     { color: "bg-purple-50 text-purple-600 border-purple-200",    label: "Lifestyle" },
-  HEALTH:        { color: "bg-emerald-50 text-emerald-600 border-emerald-200", label: "Kesehatan" },
-  ENTERTAINMENT: { color: "bg-pink-50 text-pink-600 border-pink-200",          label: "Hiburan" },
-  OTHERS:        { color: "bg-slate-100 text-slate-600 border-slate-200",      label: "Lainnya" },
-};
-
 const SOURCE_CONFIG: Record<string, { label: string; className: string }> = {
-  MANUAL:        { label: "Manual",    className: "border-amber-200 bg-amber-50 text-amber-700" },
-  QUICK_RECEIPT: { label: "Foto Nota", className: "border-emerald-200 bg-emerald-50 text-emerald-700" },
-  SPLIT_BILL:    { label: "Split",     className: "border-cyan-200 bg-cyan-50 text-cyan-700" },
+  MANUAL:        { label: "Manual",    className: "border-slate-200/60 bg-[#fbfbfb] text-slate-500" },
+  QUICK_RECEIPT: { label: "Foto Nota", className: "border-emerald-100 bg-emerald-50/80 text-emerald-700" },
+  SPLIT_BILL:    { label: "Split",     className: "border-emerald-100/40 bg-emerald-50/40 text-emerald-600" },
 };
-
-function CategoryIcon({ category }: { category: string }) {
-  const cls = "h-4 w-4";
-  switch (category) {
-    case "FOOD":          return <Utensils className={cls} />;
-    case "TRANSPORT":     return <Car className={cls} />;
-    case "LIFESTYLE":     return <ShoppingBag className={cls} />;
-    case "HEALTH":        return <Heart className={cls} />;
-    case "ENTERTAINMENT": return <Gamepad2 className={cls} />;
-    default:              return <Package className={cls} />;
-  }
-}
 
 function SourceIcon({ source }: { source: string }) {
   const cls = "h-3 w-3";
@@ -108,6 +90,7 @@ export default async function HistoryPage({
   const month = String(params.month ?? "");
 
   const { expenses, totalCount, totalPages, totalAmount } = await getHistory({ page, category, month });
+  const customCategories = await getUserCategories();
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-8 pb-32 md:pb-16 flex flex-col flex-1 h-full min-h-0 overflow-y-auto hide-scrollbar">
@@ -115,7 +98,7 @@ export default async function HistoryPage({
       {/* Header */}
       <div className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4 animate-fade-in-up shrink-0">
         <div>
-          <h1 className="text-[28px] font-extrabold tracking-tight text-slate-900">Riwayat Transaksi</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-800">Riwayat Transaksi</h1>
           <p className="mt-1 text-sm font-medium text-slate-500">
             {totalCount} transaksi
             {(category || month) && " (difilter)"}
@@ -123,12 +106,18 @@ export default async function HistoryPage({
             <span className="font-bold text-slate-800">{idr.format(totalAmount)}</span>
           </p>
         </div>
-        <div className="hidden md:block">
+        <div className="hidden md:flex items-center gap-2">
           <a
             href="/api/export"
-            className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-bold text-white shadow-md hover:bg-slate-800 transition-all active:scale-[0.98]"
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm hover:bg-slate-50 transition-transform active:scale-[0.96]"
           >
-            Export ke CSV
+            Export CSV
+          </a>
+          <a
+            href="/api/export/pdf"
+            className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-slate-800 transition-transform active:scale-[0.96]"
+          >
+            Export PDF
           </a>
         </div>
       </div>
@@ -142,12 +131,12 @@ export default async function HistoryPage({
 
       {/* Empty state */}
       {expenses.length === 0 ? (
-        <div className="bento-card border-dashed bg-transparent p-12 mt-4 text-center shadow-none animate-fade-in-up flex flex-col items-center justify-center">
-          <div className="bg-slate-50 p-4 rounded-3xl mb-4">
+        <div className="premium-card border-dashed bg-transparent p-12 mt-4 text-center animate-fade-in-up flex flex-col items-center justify-center">
+          <div className="bg-slate-50 border border-slate-100 p-4 rounded-full mb-4">
             <ReceiptText className="h-8 w-8 text-slate-400" />
           </div>
-          <p className="text-[15px] font-bold text-slate-800">Belum ada catatan</p>
-          <p className="mt-1 text-sm font-medium text-slate-500">
+          <p className="text-sm font-bold text-slate-800">Belum ada catatan</p>
+          <p className="mt-1 text-xs font-medium text-slate-500">
             {category || month
               ? "Coba ubah filter atau bulan pencarian."
               : "Scan struk atau input manual di halaman utama."}
@@ -160,7 +149,7 @@ export default async function HistoryPage({
             style={{ animationDelay: "150ms" }}
           >
             {expenses.map((expense) => {
-              const catConfig = CATEGORY_CONFIG[expense.category] ?? CATEGORY_CONFIG.OTHERS;
+              const catStyle = getCategoryStyle(expense.category, customCategories);
               const srcConfig = SOURCE_CONFIG[expense.source] ?? {
                 label: expense.source,
                 className: "border-slate-200 bg-slate-50 text-slate-600",
@@ -172,64 +161,77 @@ export default async function HistoryPage({
                 expense.receipt?.merchantName?.trim() ||
                 null;
 
+              const Icon = catStyle.Icon;
+
               return (
                 <div
                   key={expense.id}
-                  className="bento-card p-0 overflow-hidden group flex flex-col hover:shadow-[0_8px_32px_rgba(0,0,0,0.08)] transition-all duration-300"
+                  className="premium-card p-0 flex flex-col overflow-hidden group"
                 >
                   {/* ── Top: icon + nama + hapus ── */}
-                  <div className="p-4 pb-3 flex items-start gap-3">
+                  <div className="p-4 pb-3.5 flex items-start gap-3.5">
                     {/* Category icon bubble */}
                     <div
-                      className={`shrink-0 flex h-10 w-10 items-center justify-center rounded-[14px] border shadow-sm ${catConfig.color}`}
+                      className={`shrink-0 flex h-10 w-10 items-center justify-center rounded-full border transition-all ${catStyle.color}`}
                     >
-                      <CategoryIcon category={expense.category} />
+                      <Icon className="h-4 w-4" />
                     </div>
 
                     <div className="flex-1 min-w-0">
                       {/* Nama pengeluaran */}
                       {displayName ? (
-                        <p className="text-[14px] font-bold text-slate-800 leading-snug truncate">
+                        <p className="text-sm font-bold text-slate-800 leading-snug truncate group-hover:text-slate-900 transition-colors">
                           {displayName}
                         </p>
                       ) : (
-                        <p className="text-[13px] font-semibold text-slate-400 italic leading-snug">
+                        <p className="text-xs font-semibold text-slate-400 italic leading-snug">
                           Tidak ada nama
                         </p>
                       )}
                       {/* Sub-label kategori */}
-                      <p className="text-[11px] font-medium text-slate-400 mt-0.5">
-                        {catConfig.label}
+                      <p className="text-xs font-medium text-slate-500 mt-0.5">
+                        {catStyle.label}
                       </p>
                     </div>
 
-                    {/* Hapus */}
-                    <form
-                      action={async () => {
-                        "use server";
-                        await deleteExpense(expense.id);
-                      }}
-                    >
-                      <button
-                        type="submit"
-                        title="Hapus pengeluaran"
-                        className="shrink-0 rounded-xl p-1.5 text-slate-300 opacity-0 group-hover:opacity-100 hover:bg-rose-50 hover:text-rose-500 transition-all focus:opacity-100"
+                    {/* Edit & Hapus */}
+                    <div className="flex items-center opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-all">
+                      <EditExpenseDialog 
+                        expense={{
+                          id: expense.id,
+                          description: expense.description,
+                          totalAmount: expense.totalAmount,
+                          category: expense.category
+                        }} 
+                        customCategories={customCategories}
+                      />
+                      <form
+                        action={async () => {
+                          "use server";
+                          await deleteExpense(expense.id);
+                        }}
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </form>
+                        <button
+                          type="submit"
+                          title="Hapus pengeluaran"
+                          className="shrink-0 rounded-full p-2 text-slate-300 hover:bg-rose-50 hover:text-rose-500 transition-all cursor-pointer"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </form>
+                    </div>
                   </div>
 
                   {/* Divider tipis */}
                   <div className="mx-4 border-t border-slate-100" />
 
                   {/* ── Tengah: nominal + source badge ── */}
-                  <div className="px-4 pt-3 pb-2 flex items-center justify-between gap-2">
-                    <p className="text-[22px] font-extrabold tracking-tight text-slate-900 leading-none">
+                  <div className="px-4 pt-3.5 pb-2.5 flex items-center justify-between gap-2">
+                    <p className="text-xl font-bold tracking-tight text-slate-800 leading-none">
                       {idr.format(expense.totalAmount)}
                     </p>
                     <span
-                      className={`inline-flex items-center gap-1.5 rounded-lg border px-2 py-1 text-[10px] font-bold shrink-0 ${srcConfig.className}`}
+                      className={`inline-flex items-center gap-1.5 rounded-lg border px-2 py-1 text-[10px] font-semibold shrink-0 ${srcConfig.className}`}
                     >
                       <SourceIcon source={expense.source} />
                       {srcConfig.label}
@@ -238,23 +240,23 @@ export default async function HistoryPage({
 
                   {/* ── AI Advice ── */}
                   {expense.aiAdvice && (
-                    <div className="mx-4 mb-3 rounded-xl bg-slate-50 border border-slate-100 px-3 py-2">
-                      <p className="line-clamp-2 text-[11px] leading-relaxed text-slate-500 italic">
-                        &ldquo;{expense.aiAdvice}&rdquo;
+                    <div className="mx-4 mb-4 rounded-xl bg-slate-50 border border-slate-100 p-3">
+                      <p className="line-clamp-2 text-xs font-medium text-slate-500">
+                        {expense.aiAdvice}
                       </p>
                     </div>
                   )}
 
                   {/* ── Footer: tanggal + detail ── */}
-                  <div className="mt-auto px-4 py-2.5 border-t border-slate-100 flex items-center justify-between bg-slate-50/60">
-                    <p className="text-[11px] font-medium text-slate-400">
+                  <div className="mt-auto px-4 py-3 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
+                    <p className="text-xs font-medium text-slate-500">
                       {dateFormatter.format(new Date(expense.date))}
                     </p>
                     <Link
                       href={`/history/${expense.id}`}
-                      className="flex items-center gap-0.5 text-[11px] font-bold text-emerald-600 hover:text-emerald-700 transition-colors"
+                      className="flex items-center gap-0.5 text-xs font-bold text-emerald-600 hover:text-emerald-700 transition-colors"
                     >
-                      Detail <ChevronRight className="h-3.5 w-3.5" />
+                      Detail <ChevronRight className="h-4 w-4" />
                     </Link>
                   </div>
                 </div>
@@ -270,12 +272,18 @@ export default async function HistoryPage({
       )}
 
       {/* Export button — mobile only */}
-      <div className="mt-6 flex md:hidden justify-end">
+      <div className="mt-6 grid grid-cols-2 gap-3 md:hidden">
         <a
           href="/api/export"
-          className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+          className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-center text-sm font-bold text-slate-700 shadow-sm transition-transform active:scale-[0.96] hover:bg-slate-50"
         >
-          Export ke CSV
+          Export CSV
+        </a>
+        <a
+          href="/api/export/pdf"
+          className="rounded-xl bg-slate-900 px-4 py-2.5 text-center text-sm font-bold text-white shadow-sm transition-transform active:scale-[0.96] hover:bg-slate-800"
+        >
+          Export PDF
         </a>
       </div>
     </div>

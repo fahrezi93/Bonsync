@@ -94,6 +94,7 @@ async function generateWithGeminiModelFallback(params: {
 }
 
 async function classifyAndRoastExpense(
+  userId: string,
   amount: number,
   promptContext: string,
 ): Promise<{ category: string; aiAdvice: string; fallbackUsed: boolean }> {
@@ -107,6 +108,13 @@ async function classifyAndRoastExpense(
   }
 
   try {
+    const customCategories = await prisma.category.findMany({
+      where: { userId },
+      select: { name: true }
+    });
+    const customCatNames = customCategories.map(c => c.name).join("/");
+    const categoriesList = "FOOD/TRANSPORT/LIFESTYLE/HEALTH/ENTERTAINMENT/OTHERS" + (customCatNames ? `/${customCatNames}` : "");
+
     const roastResponse = await generateWithGeminiModelFallback({
       apiKey,
       config: {
@@ -121,7 +129,7 @@ async function classifyAndRoastExpense(
               text:
                 `${promptContext}\n` +
                 `Total pengeluaran yang dicatat: ${formatRupiah(amount)}.\n` +
-                "Kategorikan (FOOD/TRANSPORT/LIFESTYLE/HEALTH/ENTERTAINMENT/OTHERS) " +
+                `Kategorikan (${categoriesList}) ` +
                 "dan beri aiAdvice 1-2 kalimat roasting/nasihat tajam bahasa Indonesia gaul.",
             },
           ],
@@ -153,11 +161,12 @@ const ROAST_FALLBACK = {
 
 /** Versi bergaransi cepat — maksimal 5 detik, lalu fallback */
 async function classifyWithTimeout(
+  userId: string,
   amount: number,
   promptContext: string,
 ): Promise<{ category: string; aiAdvice: string; fallbackUsed: boolean }> {
   return Promise.race([
-    classifyAndRoastExpense(amount, promptContext),
+    classifyAndRoastExpense(userId, amount, promptContext),
     new Promise<typeof ROAST_FALLBACK>((resolve) =>
       setTimeout(() => resolve(ROAST_FALLBACK), ROAST_TIMEOUT_MS),
     ),
@@ -168,6 +177,12 @@ async function classifyWithTimeout(
 function revalidateExpensePages() {
   revalidatePath("/");
   revalidatePath("/history");
+}
+
+function getOwnedReceiptImagePath(userId: string, imagePath: string | undefined) {
+  const path = imagePath?.trim();
+  if (!path) return undefined;
+  return path.startsWith(`${userId}/`) ? path : undefined;
 }
 
 export async function extractReceiptDraft(formData: FormData): Promise<ExtractReceiptResult> {
@@ -282,6 +297,7 @@ export async function saveQuickReceiptExpense(draftPayload: ReceiptDraft): Promi
   const userId = await requireCurrentUserId();
   const draft = sanitizeReceiptDraft(draftPayload);
   const totals = computeReceiptTotals(draft);
+  const receiptImagePath = getOwnedReceiptImagePath(userId, draft.imageUrl);
 
   if (draft.items.length === 0) {
     return { success: false, message: "Item nota kosong. Tambah minimal 1 item." };
@@ -291,6 +307,7 @@ export async function saveQuickReceiptExpense(draftPayload: ReceiptDraft): Promi
   }
 
   const roast = await classifyWithTimeout(
+    userId,
     totals.total,
     `Konteks transaksi: scan nota cepat dari merchant "${draft.merchantName}". ` +
       `Subtotal ${formatRupiah(totals.subtotal)}, potongan ${formatRupiah(totals.discount)}, ` +
@@ -309,6 +326,7 @@ export async function saveQuickReceiptExpense(draftPayload: ReceiptDraft): Promi
           serviceChargeAmount: draft.serviceCharge,
           totalAmount: totals.total,
           mode: "QUICK",
+          imageUrl: receiptImagePath,
           items: {
             create: draft.items.map((item) => ({
               itemName: item.itemName,
@@ -362,6 +380,7 @@ export async function saveSplitBillExpense(
 ): Promise<SaveExpenseResult> {
   const userId = await requireCurrentUserId();
   const draft = sanitizeReceiptDraft(draftPayload);
+  const receiptImagePath = getOwnedReceiptImagePath(userId, draft.imageUrl);
   const participantNames = Array.from(
     new Set(
       Object.values(assignments)
@@ -386,6 +405,7 @@ export async function saveSplitBillExpense(
   }
 
   const roast = await classifyWithTimeout(
+    userId,
     selfShare,
     `Konteks transaksi: split bill dari merchant "${draft.merchantName}", hanya share user yang dicatat. ` +
       `Bagian user: subtotal ${formatRupiah(selfLine?.subtotal ?? 0)}, potongan ${formatRupiah(selfLine?.discountShare ?? 0)}, ` +
@@ -405,6 +425,7 @@ export async function saveSplitBillExpense(
           serviceChargeAmount: draft.serviceCharge,
           totalAmount: fullTotal,
           mode: "SPLIT",
+          imageUrl: receiptImagePath,
           items: {
             create: draft.items.map((item, idx) => ({
               itemName: item.itemName,
@@ -475,6 +496,7 @@ export async function addManualExpense(
   }
 
   const roast = await classifyWithTimeout(
+    userId,
     amount,
     `Konteks transaksi manual: "${description}".`,
   );
@@ -540,5 +562,202 @@ export async function deleteExpense(id: string): Promise<{ success: boolean; mes
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
     return { success: false, message: `Gagal menghapus: ${msg}` };
+  }
+}
+
+export interface EditExpenseData {
+  id: string;
+  description: string;
+  totalAmount: number;
+  category: string;
+}
+
+export async function editExpense(data: EditExpenseData): Promise<{ success: boolean; message: string }> {
+  const userId = await requireCurrentUserId();
+  if (!data.id) return { success: false, message: "ID tidak valid." };
+  if (!data.description) return { success: false, message: "Deskripsi tidak boleh kosong." };
+  if (data.totalAmount <= 0) return { success: false, message: "Nominal tidak valid." };
+
+  try {
+    const existing = await prisma.expense.findFirst({
+      where: { id: data.id, userId },
+      select: { id: true, totalAmount: true, description: true, category: true, date: true, aiAdvice: true },
+    });
+
+    if (!existing) {
+      return { success: false, message: "Pengeluaran tidak ditemukan." };
+    }
+
+    const isAmountChanged = existing.totalAmount !== data.totalAmount;
+    const isDescChanged = existing.description !== data.description;
+    
+    let newAdvice = existing.aiAdvice;
+
+    // Generate ulang nasihat jika nominal atau deskripsi berubah
+    if (isAmountChanged || isDescChanged) {
+      const roast = await classifyWithTimeout(
+        userId,
+        data.totalAmount,
+        `Konteks transaksi edit: "${data.description}". (Roast karena data baru saja diubah user)`
+      );
+      newAdvice = roast.aiAdvice;
+    }
+
+    await prisma.$transaction([
+      prisma.expense.update({
+        where: { id: existing.id },
+        data: {
+          description: data.description,
+          totalAmount: data.totalAmount,
+          category: data.category,
+          aiAdvice: newAdvice,
+        },
+      }),
+      prisma.monthlyBudget.updateMany({
+        where: {
+          userId,
+          month: new Intl.DateTimeFormat("id-ID", { month: "2-digit", year: "numeric" }).format(existing.date),
+        },
+        data: { latestRoast: null },
+      }),
+    ]);
+
+    revalidateExpensePages();
+    return { success: true, message: "Pengeluaran berhasil diperbarui." };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    return { success: false, message: `Gagal memperbarui: ${msg}` };
+  }
+}
+
+export interface EditReceiptItemData {
+  id: string;
+  itemName: string;
+  price: number;
+  ownerType: "SELF" | "OTHER";
+}
+
+export interface EditReceiptExpenseData {
+  expenseId: string;
+  merchantName: string;
+  discountAmount: number;
+  taxAmount: number;
+  serviceChargeAmount: number;
+  items: EditReceiptItemData[];
+}
+
+function computeEditedReceiptAmounts(data: EditReceiptExpenseData, isSplitBill: boolean) {
+  const subtotal = data.items.reduce((sum, item) => sum + Math.max(0, Number(item.price)), 0);
+  const discount = Math.max(0, Number(data.discountAmount));
+  const tax = Math.max(0, Number(data.taxAmount));
+  const service = Math.max(0, Number(data.serviceChargeAmount));
+  const total = Math.max(0, subtotal - discount + tax + service);
+
+  if (!isSplitBill) {
+    return { subtotal, discount, tax, service, total, expenseTotal: total };
+  }
+
+  const selfSubtotal = data.items
+    .filter((item) => item.ownerType === "SELF")
+    .reduce((sum, item) => sum + Math.max(0, Number(item.price)), 0);
+  const ratio = subtotal > 0 ? selfSubtotal / subtotal : 0;
+  const expenseTotal = Math.max(0, selfSubtotal - discount * ratio + tax * ratio + service * ratio);
+
+  return { subtotal, discount, tax, service, total, expenseTotal };
+}
+
+export async function editReceiptExpense(
+  data: EditReceiptExpenseData,
+): Promise<{ success: boolean; message: string }> {
+  const userId = await requireCurrentUserId();
+  const merchantName = data.merchantName.trim();
+
+  if (!data.expenseId) return { success: false, message: "ID transaksi tidak valid." };
+  if (!merchantName) return { success: false, message: "Nama merchant tidak boleh kosong." };
+  if (data.items.length === 0) return { success: false, message: "Item nota tidak boleh kosong." };
+  if (data.items.some((item) => !item.id || !item.itemName.trim() || Number(item.price) <= 0)) {
+    return { success: false, message: "Semua item wajib punya nama dan harga lebih dari 0." };
+  }
+
+  try {
+    const existing = await prisma.expense.findFirst({
+      where: { id: data.expenseId, userId },
+      include: {
+        receipt: {
+          include: { items: true },
+        },
+      },
+    });
+
+    if (!existing || !existing.receipt) {
+      return { success: false, message: "Nota tidak ditemukan." };
+    }
+
+    const existingReceipt = existing.receipt;
+    const existingItemIds = new Set(existingReceipt.items.map((item) => item.id));
+    if (data.items.some((item) => !existingItemIds.has(item.id))) {
+      return { success: false, message: "Item nota tidak valid." };
+    }
+
+    const amounts = computeEditedReceiptAmounts(data, existing.isSplitBill);
+    if (amounts.total <= 0 || amounts.expenseTotal <= 0) {
+      return { success: false, message: "Total nota atau bagianmu harus lebih dari 0." };
+    }
+
+    const roast = await classifyWithTimeout(
+      userId,
+      amounts.expenseTotal,
+      `Konteks transaksi hasil edit nota: "${merchantName}".`,
+    );
+
+    await prisma.$transaction(async (tx) => {
+      await tx.receipt.update({
+        where: { id: existingReceipt.id },
+        data: {
+          merchantName,
+          subtotalAmount: amounts.subtotal,
+          discountAmount: amounts.discount,
+          taxAmount: amounts.tax,
+          serviceChargeAmount: amounts.service,
+          totalAmount: amounts.total,
+        },
+      });
+
+      await Promise.all(
+        data.items.map((item) =>
+          tx.receiptItem.update({
+            where: { id: item.id },
+            data: {
+              itemName: item.itemName.trim(),
+              price: Math.max(0, Number(item.price)),
+              ownerType: item.ownerType,
+            },
+          }),
+        ),
+      );
+
+      await tx.expense.update({
+        where: { id: existing.id },
+        data: {
+          description: merchantName,
+          totalAmount: amounts.expenseTotal,
+          aiAdvice: roast.aiAdvice,
+          category: roast.category,
+        },
+      });
+
+      const monthKey = new Intl.DateTimeFormat("id-ID", { month: "2-digit", year: "numeric" }).format(existing.date);
+      await tx.monthlyBudget.updateMany({
+        where: { userId, month: monthKey },
+        data: { latestRoast: null },
+      });
+    });
+
+    revalidateExpensePages();
+    revalidatePath(`/history/${existing.id}`);
+    return { success: true, message: "Detail nota berhasil diperbarui." };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    return { success: false, message: `Gagal memperbarui nota: ${msg}` };
   }
 }

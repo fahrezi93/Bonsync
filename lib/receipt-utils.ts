@@ -9,6 +9,7 @@ export interface ReceiptDraft {
   discount: number;
   tax: number;
   serviceCharge: number;
+  imageUrl?: string;
 }
 
 export type SplitAssignments = Record<number, string[]>;
@@ -26,6 +27,7 @@ export function sanitizeReceiptDraft(payload: unknown): ReceiptDraft {
     discount?: number;
     tax?: number;
     serviceCharge?: number;
+    imageUrl?: string;
   };
 
   const items = Array.isArray(raw.items)
@@ -43,6 +45,7 @@ export function sanitizeReceiptDraft(payload: unknown): ReceiptDraft {
     discount: toNonNegativeNumber(raw.discount),
     tax: toNonNegativeNumber(raw.tax),
     serviceCharge: toNonNegativeNumber(raw.serviceCharge),
+    imageUrl: raw.imageUrl?.trim(),
   };
 }
 

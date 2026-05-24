@@ -1,8 +1,10 @@
 import Link from "next/link";
-import { LogOut, LayoutDashboard, History, MessageCircle, Wallet, Camera } from "lucide-react";
 import { createClient } from "@/utils/supabase/server";
-import { signOut } from "@/actions/auth-actions";
 import { BottomNav } from "@/components/bottom-nav";
+import { DesktopNavLinks } from "@/components/desktop-nav-links";
+import { ProfileDropdown } from "@/components/profile-dropdown";
+import { prisma } from "@/lib/prisma";
+import { getProfileMetadata, getSignedAvatarUrl } from "@/lib/profile";
 
 export async function Nav() {
   const supabase = await createClient();
@@ -10,47 +12,65 @@ export async function Nav() {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // If user is authenticated, fetch their current budget data and monthly expenses
+  let budgetLimit = 0;
+  let spent = 0;
+  let remaining = 0;
+  let survivalScore = 100;
+  let displayName = "";
+  let avatarUrl: string | null = null;
+
+  if (user) {
+    const profile = getProfileMetadata({
+      email: user.email,
+      user_metadata: user.user_metadata,
+    });
+    displayName = profile.displayName;
+    avatarUrl = await getSignedAvatarUrl(profile.avatarPath);
+
+    const monthKey = new Intl.DateTimeFormat("id-ID", { month: "2-digit", year: "numeric" }).format(new Date());
+    const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+
+    const [budget, expenses] = await Promise.all([
+      prisma.monthlyBudget.findUnique({ where: { userId_month: { userId: user.id, month: monthKey } } }),
+      prisma.expense.findMany({
+        where: { userId: user.id, date: { gte: monthStart } },
+        select: { totalAmount: true },
+      }),
+    ]);
+
+    budgetLimit = budget?.limitAmount ?? 0;
+    spent = expenses.reduce((sum, exp) => sum + exp.totalAmount, 0);
+    remaining = Math.max(0, budgetLimit - spent);
+    survivalScore = budgetLimit > 0 ? (remaining / budgetLimit) * 100 : 0;
+  }
+
   return (
     <>
-      <header className="fixed top-0 w-full z-50 bg-white/70 backdrop-blur-2xl border-b border-slate-200/50">
+      <header className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-2xl border-b border-slate-200/40 shadow-[0_2px_20px_rgba(0,0,0,0.015)]">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="flex items-center justify-center w-9 h-9 rounded-[14px] bg-emerald-500 text-white font-bold text-sm shadow-md shadow-emerald-500/20 group-hover:scale-105 transition-transform">
-              B
-            </div>
-            <span className="text-[17px] font-extrabold tracking-tight text-slate-800">BonSync</span>
+          <Link href="/" className="flex items-center gap-1.5 group select-none">
+            <span className="text-[18px] font-black tracking-tight text-slate-800">
+              Bon<span className="text-emerald-500 transition-colors group-hover:text-emerald-600">Sync</span>
+            </span>
           </Link>
 
           {user && (
-            <div className="flex items-center gap-6">
-              {/* Desktop Nav Links */}
-              <nav className="hidden md:flex items-center gap-5 text-sm font-medium text-slate-500">
-                <Link href="/" className="hover:text-slate-900 transition-colors">Home</Link>
-                <Link href="/history" className="hover:text-slate-900 transition-colors">Riwayat</Link>
-                <Link href="/scan" className="hover:text-slate-900 transition-colors flex items-center gap-1">
-                   <Camera className="w-4 h-4 text-emerald-500" />
-                   Scan
-                </Link>
-                <Link href="/chat" className="hover:text-slate-900 transition-colors">AI Chat</Link>
-                <Link href="/settings" className="hover:text-slate-900 transition-colors">Budget</Link>
-              </nav>
+            <div className="flex items-center gap-4">
+              <DesktopNavLinks />
 
-              <div className="hidden md:block w-px h-5 bg-slate-200" />
+              <div className="hidden md:block w-px h-5 bg-slate-200/60" />
 
-              <div className="flex items-center gap-3">
-                <span className="hidden sm:block text-sm font-medium text-slate-600 truncate max-w-[140px]">
-                  {user.email?.split("@")[0]}
-                </span>
-                <form action={signOut}>
-                  <button
-                    type="submit"
-                    title="Keluar"
-                    className="flex items-center justify-center p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-                  >
-                    <LogOut className="h-4 w-4" />
-                  </button>
-                </form>
-              </div>
+              {/* Dynamic Interactive Profile Dropdown Card */}
+              <ProfileDropdown
+                userEmail={user.email ?? ""}
+                displayName={displayName}
+                avatarUrl={avatarUrl}
+                budgetLimit={budgetLimit}
+                spent={spent}
+                remaining={remaining}
+                survivalScore={survivalScore}
+              />
             </div>
           )}
         </div>
@@ -63,3 +83,5 @@ export async function Nav() {
     </>
   );
 }
+
+

@@ -1,11 +1,34 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bot } from "lucide-react";
+import { Sparkles } from "lucide-react";
+import type { RoastLevel } from "@/lib/roasting";
 
 interface RoastingCardProps {
   advice: string;
+  level?: RoastLevel;
 }
+
+const levelConfig: Record<
+  RoastLevel,
+  { label: string; textStyle: string; indicatorStyle: string }
+> = {
+  MILD: {
+    label: "Sopan",
+    textStyle: "text-emerald-700",
+    indicatorStyle: "bg-emerald-500",
+  },
+  MEDIUM: {
+    label: "Pedas",
+    textStyle: "text-amber-700",
+    indicatorStyle: "bg-amber-500",
+  },
+  NUCLEAR: {
+    label: "Kritis",
+    textStyle: "text-rose-700",
+    indicatorStyle: "bg-rose-500",
+  },
+};
 
 function parseMarkdown(text: string): React.ReactNode {
   if (!text) return "";
@@ -39,8 +62,9 @@ function parseMarkdown(text: string): React.ReactNode {
   });
 }
 
-export function RoastingCard({ advice }: RoastingCardProps) {
+export function RoastingCard({ advice, level = "MEDIUM" }: RoastingCardProps) {
   const [displayedText, setDisplayedText] = useState("");
+  const cfg = levelConfig[level];
 
   useEffect(() => {
     let i = 0;
@@ -53,20 +77,26 @@ export function RoastingCard({ advice }: RoastingCardProps) {
   }, [advice]);
 
   return (
-    <div className="bento-card relative overflow-hidden bg-gradient-to-br from-emerald-50/80 to-white shadow-[0_8px_32px_rgba(0,0,0,0.05)] border-emerald-100">
-      {/* Background glow effect */}
-      <div className="absolute -top-10 -right-10 w-40 h-40 bg-emerald-300/20 rounded-full blur-3xl pointer-events-none" />
-      
-      <div className="mb-4 inline-flex items-center gap-3 text-[13px] font-bold tracking-tight text-slate-800">
-        <span className="p-2 bg-emerald-100/50 rounded-[12px]">
-           <Bot className="h-4 w-4 text-emerald-600" />
-        </span>
-        Insight & Roasting AI
+    <div className="premium-card p-5 md:p-6 flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-50 border border-slate-200">
+            <Sparkles className="h-4 w-4 text-slate-500" />
+          </div>
+          <span className="text-sm font-bold text-slate-700">Evaluasi AI</span>
+        </div>
+
+        <div className="flex items-center gap-2 bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-full">
+          <div className={`h-2 w-2 rounded-full ${cfg.indicatorStyle} animate-pulse`} />
+          <span className={`text-xs font-bold ${cfg.textStyle}`}>
+            Level: {cfg.label}
+          </span>
+        </div>
       </div>
       
-      <div className="rounded-2xl border border-emerald-100 bg-white/80 shadow-sm backdrop-blur-sm p-5 text-[13px] font-medium leading-relaxed text-slate-700 min-h-[100px] whitespace-pre-line">
+      <div className="text-[13px] font-medium leading-relaxed text-slate-700 min-h-[80px] whitespace-pre-line bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
         {parseMarkdown(displayedText)}
-        <span className="animate-pulse text-emerald-500 font-bold ml-0.5">_</span>
+        <span className="inline-block w-1.5 h-4 bg-slate-400 rounded-sm animate-pulse ml-1 align-middle" />
       </div>
     </div>
   );

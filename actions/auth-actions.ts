@@ -10,6 +10,11 @@ export interface AuthActionState {
   success?: string;
 }
 
+export interface ProfileActionState {
+  success: boolean;
+  message: string;
+}
+
 // Helper URL aplikasi — fallback ke localhost saat dev
 function normalizeSiteUrl(url: string) {
   return url.replace(/\/+$/, "");
@@ -161,4 +166,45 @@ export async function signOut(): Promise<void> {
   await supabase.auth.signOut();
   revalidatePath("/", "layout");
   redirect("/login");
+}
+
+export async function updateProfile(
+  _prevState: ProfileActionState,
+  formData: FormData,
+): Promise<ProfileActionState> {
+  const displayName = (formData.get("displayName") as string | null)?.trim() ?? "";
+  const avatarPath = (formData.get("avatarPath") as string | null)?.trim() ?? "";
+
+  if (displayName.length < 2) {
+    return { success: false, message: "Nama tampilan minimal 2 karakter." };
+  }
+  if (displayName.length > 40) {
+    return { success: false, message: "Nama tampilan maksimal 40 karakter." };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return { success: false, message: "Sesi login tidak valid. Silakan login ulang." };
+  }
+
+  const cleanAvatarPath = avatarPath.startsWith(`${user.id}/`) ? avatarPath : null;
+  const { error } = await supabase.auth.updateUser({
+    data: {
+      display_name: displayName,
+      avatar_path: cleanAvatarPath,
+    },
+  });
+
+  if (error) {
+    return { success: false, message: `Gagal memperbarui profil: ${error.message}` };
+  }
+
+  revalidatePath("/", "layout");
+  revalidatePath("/settings");
+  return { success: true, message: "Profil berhasil diperbarui." };
 }

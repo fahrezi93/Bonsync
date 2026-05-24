@@ -8,8 +8,9 @@ export const metadata: Metadata = {
 
 export default function ScanPage() {
   return (
-    <div className="mx-auto max-w-md px-4 py-8 flex flex-col flex-1 min-h-0 overflow-y-auto hide-scrollbar">
+    <div className="mx-auto w-full max-w-md md:max-w-5xl px-4 py-8 flex flex-col flex-1 min-h-0 overflow-y-auto hide-scrollbar">
       <ScanFlow />
     </div>
   );
 }
+

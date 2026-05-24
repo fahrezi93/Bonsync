@@ -22,12 +22,19 @@ enum ReceiptItemOwner {
   OTHER
 }
 
+enum RoastLevel {
+  MILD
+  MEDIUM
+  NUCLEAR
+}
+
 model MonthlyBudget {
   id          String   @id @default(uuid())
   userId      String   @default("legacy")
   limitAmount Float
   month       String
   latestRoast String?
+  roastLevel  RoastLevel @default(MEDIUM)
   createdAt   DateTime @default(now())
 
   @@unique([userId, month])
@@ -44,6 +51,7 @@ model Receipt {
   serviceChargeAmount Float         @default(0)
   totalAmount         Float
   mode                ReceiptMode
+  imageUrl            String?
   createdAt           DateTime      @default(now())
   items               ReceiptItem[]
   expenses            Expense[]
@@ -74,4 +82,15 @@ model Expense {
   date        DateTime @default(now())
 
   @@index([userId, date])
+}
+
+model Category {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String
+  icon      String?
+  color     String?
+  createdAt DateTime @default(now())
+
+  @@unique([userId, name])
 }

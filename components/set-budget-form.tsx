@@ -140,115 +140,111 @@ export function SetBudgetForm({ currentLimit, monthLabel }: SetBudgetFormProps) 
 
   return (
     <div
-      className="flex-1 w-full bg-transparent flex items-center justify-center p-4"
+      className="w-full premium-card p-6 md:p-8 relative overflow-hidden transition-all duration-300"
       suppressHydrationWarning
     >
-      <div
-        className="w-full max-w-md bento-card shadow-[0_8px_32px_rgba(0,0,0,0.05)] border-none"
-        suppressHydrationWarning
-      >
-        {/* Header */}
-        <div className="mb-6 flex items-center gap-3 animate-fade-in-up" suppressHydrationWarning>
-          <div
-            className="rounded-[14px] bg-slate-100 p-2.5"
-            suppressHydrationWarning
+
+      {/* Header */}
+      <div className="mb-6 flex items-center gap-3.5 animate-fade-in-up" suppressHydrationWarning>
+        <div
+          className="rounded-xl bg-slate-50 border border-slate-100 p-3 text-slate-500 shadow-sm"
+          suppressHydrationWarning
+        >
+          <Wallet className="h-5.5 w-5.5" />
+        </div>
+        <div suppressHydrationWarning>
+          <h1 className="text-lg font-bold tracking-tight text-slate-800">
+            {isEditMode ? "Ubah Budget" : "Set Budget Bulan Ini"}
+          </h1>
+          <p className="text-xs font-medium text-slate-500 mt-0.5">{monthLabel}</p>
+        </div>
+      </div>
+
+      {/* Info jika belum ada budget */}
+      {!isEditMode && (
+        <div className="mb-6 rounded-[16px] border border-emerald-100 bg-emerald-50/50 px-4 py-3.5 text-xs font-semibold text-emerald-800 leading-relaxed animate-fade-in-up">
+          Sebelum mulai mencatat pengeluaran, tentukan dulu batas budget bulan ini ya!
+        </div>
+      )}
+
+      <form action={formAction} className="space-y-6 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+        <div suppressHydrationWarning>
+          <label
+            htmlFor="limitAmount-display"
+            className="mb-2.5 block text-sm font-medium text-slate-600"
           >
-            <Wallet className="h-5 w-5 text-slate-700" strokeWidth={2.5} />
+            Nominal Budget
+          </label>
+
+          {/* Input terlihat (berformat titik) */}
+          <div className="relative" suppressHydrationWarning>
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-400 pointer-events-none">
+              Rp
+            </span>
+            <input
+              ref={inputRef}
+              id="limitAmount-display"
+              name="limitAmount"
+              type="text"
+              inputMode="numeric"
+              value={displayVal}
+              onChange={handleChange}
+              onKeyDown={handleKeyDown}
+              placeholder="0"
+              required
+              autoComplete="off"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-12 pr-4 py-4 text-xl font-bold text-slate-800 placeholder:text-slate-300 focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all tracking-tight"
+            />
           </div>
-          <div suppressHydrationWarning>
-            <h1 className="text-[17px] font-bold tracking-tight text-slate-900">
-              {isEditMode ? "Ubah Budget" : "Set Budget Bulan Ini"}
-            </h1>
-            <p className="text-xs font-semibold text-slate-400">{monthLabel}</p>
-          </div>
+
+          {/* Preview formatted */}
+          {showPreview ? (
+            <p className="mt-2 text-sm font-bold text-emerald-600">
+              = {idr.format(numericValue)}
+            </p>
+          ) : displayVal.length > 0 && !isValid ? (
+            <p className="mt-2 text-xs text-rose-500 font-semibold">
+              {numericValue > 1_000_000_000
+                ? "Maksimal Rp 1.000.000.000"
+                : "Masukkan angka yang valid"}
+            </p>
+          ) : (
+            <p className="mt-2 text-[11px] font-semibold text-slate-400 leading-relaxed">
+              Ketik nominal, titik otomatis muncul - Berlaku untuk {monthLabel}
+            </p>
+          )}
         </div>
 
-        {/* Info jika belum ada budget */}
-        {!isEditMode && (
-          <div className="mb-6 rounded-[14px] border border-blue-100/50 bg-blue-50/50 px-4 py-3.5 text-xs font-medium text-blue-800 leading-relaxed animate-fade-in-up">
-            Sebelum mulai mencatat pengeluaran, tentukan dulu batas budget bulan ini ya!
+        {/* Feedback dari server */}
+        {state.message && (
+          <div
+            className={`rounded-[16px] border px-4 py-3 text-xs font-bold leading-relaxed ${
+              state.success
+                ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                : "border-rose-200 bg-rose-50 text-rose-800"
+            }`}
+          >
+            {state.message}
           </div>
         )}
 
-        <form action={formAction} className="space-y-6 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
-          <div suppressHydrationWarning>
-            <label
-              htmlFor="limitAmount-display"
-              className="mb-2 block text-[10px] font-bold text-slate-500 uppercase tracking-widest"
-            >
-              Nominal Budget
-            </label>
-
-            {/* Input terlihat (berformat titik) */}
-            <div className="relative" suppressHydrationWarning>
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400 pointer-events-none">
-                Rp
-              </span>
-              <input
-                ref={inputRef}
-                id="limitAmount-display"
-                name="limitAmount"
-                type="text"
-                inputMode="numeric"
-                value={displayVal}
-                onChange={handleChange}
-                onKeyDown={handleKeyDown}
-                placeholder="0"
-                required
-                autoComplete="off"
-                className="w-full rounded-2xl border border-slate-200/60 bg-slate-50/50 pl-11 pr-4 py-4 text-xl font-extrabold text-slate-900 placeholder:text-slate-300 focus:border-slate-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-slate-100 transition-all tracking-tight shadow-sm"
-              />
-            </div>
-
-            {/* Preview formatted */}
-            {showPreview ? (
-              <p className="mt-2 text-sm font-semibold text-emerald-600">
-                = {idr.format(numericValue)}
-              </p>
-            ) : displayVal.length > 0 && !isValid ? (
-              <p className="mt-2 text-xs text-rose-500">
-                {numericValue > 1_000_000_000
-                  ? "Maksimal Rp 1.000.000.000"
-                  : "Masukkan angka yang valid"}
-              </p>
-            ) : (
-              <p className="mt-2 text-xs text-slate-400">
-                Ketik nominal, titik otomatis muncul - Berlaku untuk {monthLabel}
-              </p>
-            )}
-          </div>
-
-          {/* Feedback dari server */}
-          {state.message && (
-            <div
-              className={`rounded-xl border px-4 py-3 text-sm leading-snug ${
-                state.success
-                  ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                  : "border-rose-200 bg-rose-50 text-rose-800"
-              }`}
-            >
-              {state.message}
-            </div>
+        <button
+          type="submit"
+          disabled={pending || !isValid}
+          className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-4 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm active:scale-95 cursor-pointer"
+        >
+          {pending ? (
+            <Loader2 className="h-4.5 w-4.5 animate-spin text-emerald-200" />
+          ) : (
+            <Wallet className="h-4.5 w-4.5 text-white opacity-80" />
           )}
-
-          <button
-            type="submit"
-            disabled={pending || !isValid}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-4 text-[14px] font-bold text-white hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md active:scale-[0.98]"
-          >
-            {pending ? (
-              <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
-            ) : (
-              <Wallet className="h-4 w-4 opacity-70" />
-            )}
-            {pending
-              ? "Menyimpan..."
-              : isEditMode
-                ? "Perbarui Budget"
-                : "Simpan Budget"}
-          </button>
-        </form>
-      </div>
+          {pending
+            ? "Menyimpan..."
+            : isEditMode
+              ? "Perbarui Budget"
+              : "Simpan Budget"}
+        </button>
+      </form>
     </div>
   );
 }

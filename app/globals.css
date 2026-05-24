@@ -2,7 +2,7 @@
 
 @theme {
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-mono), ui-monospace, monospace;
+  --font-mono: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 
   /* Custom Color Palette from Image */
   --color-emerald-50: #eef8f5;
@@ -18,12 +18,28 @@
   --color-emerald-950: #0c2e28;
   
   --color-slate-50: #EEEEEE;
+
+  /* Adora Tokens (Emerald Green Variant) */
+  --color-canvas-white: #ffffff;
+  --color-cloud-mist: #e0e0db;
+  --color-slate-text: #353241;
+  --color-rich-emerald: #0f2d24; /* Dark rich emerald instead of dark rich violet */
+  --color-action-emerald: #592eff; /* Map action-emerald to vivid action green/violet style, we'll keep Action Emerald as #2FA084 or custom */
+  --color-adora-action: #10b981; /* Pure action green */
+  
+  --color-air-blue: #bcf2ff;
+  --color-lush-green: #dfff9d;
+  --color-sunset-pink: #ffaae6;
+  --color-neon-pink: #f843c2;
+  --color-aqua-blue: #2ed6ff;
+  --color-electric-green: #a2ea13;
+  --color-soft-gray-fill: #f4f4f3;
 }
 
 @layer base {
   :root {
     --font-inter: "Inter", sans-serif;
-    --font-mono: "DM Mono", monospace;
+    --font-mono: "Inter", sans-serif;
   }
 
   html {
@@ -33,12 +49,77 @@
   }
 
   body {
-    background-color: var(--color-slate-50);
-    color: #09090B; /* zinc-950 */
+    background-color: var(--color-canvas-white);
+    color: var(--color-slate-text);
   }
 }
 
 @layer utilities {
+  /* ======================== */
+  /* Landing Page Utilities   */
+  /* ======================== */
+  .text-gradient-emerald {
+    background: linear-gradient(135deg, #2FA084 0%, #6FCF97 50%, #4abc9c 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .text-gradient-white {
+    background: linear-gradient(135deg, #ffffff 0%, rgba(255,255,255,0.7) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .glow-emerald {
+    box-shadow: 0 0 80px 20px rgba(47, 160, 132, 0.15), 0 0 160px 60px rgba(47, 160, 132, 0.06);
+  }
+
+  .landing-card-dark {
+    @apply bg-white/[0.05] border border-white/[0.08] rounded-3xl backdrop-blur-md;
+  }
+
+  @keyframes floatY {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+
+  .animate-float {
+    animation: floatY 4s ease-in-out infinite;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% center; }
+    100% { background-position: 200% center; }
+  }
+
+  .animate-shimmer {
+    background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 3s linear infinite;
+  }
+
+  @keyframes glowPulse {
+    0%, 100% { opacity: 0.4; transform: scale(1); }
+    50% { opacity: 0.7; transform: scale(1.05); }
+  }
+
+  .animate-glow-pulse {
+    animation: glowPulse 4s ease-in-out infinite;
+  }
+
+  @keyframes roastBubble {
+    0% { opacity: 0; transform: translateY(12px) scale(0.95); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .animate-roast-bubble {
+    animation: roastBubble 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    opacity: 0;
+  }
+
+
   .premium-card {
     @apply bg-white border border-slate-200/60 rounded-[24px] shadow-[0_4px_24px_rgba(0,0,0,0.02)] transition-shadow duration-300 hover:shadow-[0_8px_32px_rgba(0,0,0,0.04)];
   }

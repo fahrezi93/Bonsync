@@ -12,6 +12,7 @@
  */
 
 import {
+  useEffect,
   useLayoutEffect,
   useRef,
   useState,
@@ -67,6 +68,7 @@ interface CurrencyInputProps {
   className?: string;
   id?: string;
   autoComplete?: string;
+  minimal?: boolean;
 }
 
 export function CurrencyInput({
@@ -80,6 +82,7 @@ export function CurrencyInput({
   className = "",
   id,
   autoComplete = "off",
+  minimal = false,
 }: CurrencyInputProps) {
   const isControlled = value !== undefined;
 
@@ -92,16 +95,13 @@ export function CurrencyInput({
   const inputRef = useRef<HTMLInputElement>(null);
   const pendingCaretDigitsRef = useRef<number | null>(null);
 
-  // Sync jika value dari luar berubah (controlled)
-  const prevValueRef = useRef<number | undefined>(value);
-  if (isControlled && value !== prevValueRef.current) {
-    prevValueRef.current = value;
+  useEffect(() => {
+    if (!isControlled) return;
+    if (document.activeElement === inputRef.current) return;
+
     const formatted = value != null && value > 0 ? formatRibuan(String(value)) : "";
-    // Hanya update display jika sedang tidak fokus, untuk menghindari gangguan saat mengetik
-    if (document.activeElement !== inputRef.current) {
-      setDisplayVal(formatted);
-    }
-  }
+    setDisplayVal(formatted);
+  }, [isControlled, value]);
 
   const numericValue = (() => {
     const raw = stripFormat(displayVal);
@@ -173,8 +173,9 @@ export function CurrencyInput({
     pendingCaretDigitsRef.current = null;
   }, [displayVal]);
 
-  const baseClass =
-    "no-spinner w-full rounded-xl border border-slate-200/60 bg-slate-50/50 px-4 py-3 text-[13px] font-semibold text-slate-800 placeholder:text-slate-400 placeholder:font-medium focus:border-slate-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-slate-100 transition-all font-mono shadow-sm";
+  const baseClass = minimal
+    ? "no-spinner focus:outline-none font-mono"
+    : "no-spinner w-full rounded-xl border border-slate-200/60 bg-slate-50/50 px-4 py-3 text-[13px] font-semibold text-slate-800 placeholder:text-slate-400 placeholder:font-medium focus:border-slate-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-slate-100 transition-all font-mono shadow-sm";
 
   return (
     <>

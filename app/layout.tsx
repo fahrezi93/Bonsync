@@ -1,20 +1,14 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, DM_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { Nav } from "@/components/nav";
 import { ConditionalNavWrapper } from "@/components/conditional-nav-wrapper";
 import { MainLayoutWrapper } from "@/components/main-layout-wrapper";
+import { getCurrentUserId } from "@/lib/auth";
 
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
-  display: "swap",
-});
-
-const dmMono = DM_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500"],
-  variable: "--font-mono",
   display: "swap",
 });
 
@@ -23,7 +17,6 @@ export const metadata: Metadata = {
   description:
     "Catat pengeluaran, split bill, dan dapatkan roasting dari AI tentang kebiasaan belanjamu.",
   keywords: ["expense tracker", "split bill", "AI", "keuangan", "BonSync"],
-  manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -39,28 +32,32 @@ export const viewport: Viewport = {
   themeColor: "#10b981",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const userId = await getCurrentUserId();
+  const isAuthenticated = !!userId;
+
   return (
     <html
       lang="id"
-      className={`${inter.variable} ${dmMono.variable}`}
+      className={`${inter.variable}`}
       suppressHydrationWarning
     >
       <body
         className="antialiased font-sans bg-slate-50 text-slate-900 selection:bg-emerald-500 selection:text-white"
         suppressHydrationWarning
       >
-        <ConditionalNavWrapper>
+        <ConditionalNavWrapper isAuthenticated={isAuthenticated}>
           <Nav />
         </ConditionalNavWrapper>
-        <MainLayoutWrapper>
+        <MainLayoutWrapper isAuthenticated={isAuthenticated}>
           {children}
         </MainLayoutWrapper>
       </body>
     </html>
   );
 }
+

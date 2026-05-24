@@ -115,7 +115,7 @@ export function QuickReceiptZone() {
         <input
           name="receipt"
           type="file"
-          accept="image/png,image/jpeg,image/webp"
+          accept="image/*"
           className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 transition-colors"
           required
         />
