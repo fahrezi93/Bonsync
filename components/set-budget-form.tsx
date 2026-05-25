@@ -145,18 +145,12 @@ export function SetBudgetForm({ currentLimit, monthLabel }: SetBudgetFormProps) 
     >
 
       {/* Header */}
-      <div className="mb-6 flex items-center gap-3.5 animate-fade-in-up" suppressHydrationWarning>
-        <div
-          className="rounded-xl bg-slate-50 border border-slate-100 p-3 text-slate-500 shadow-sm"
-          suppressHydrationWarning
-        >
-          <Wallet className="h-5.5 w-5.5" />
-        </div>
+      <div className="mb-6 flex flex-col gap-1 animate-fade-in-up" suppressHydrationWarning>
         <div suppressHydrationWarning>
-          <h1 className="text-lg font-bold tracking-tight text-slate-800">
-            {isEditMode ? "Ubah Budget" : "Set Budget Bulan Ini"}
+          <h1 className="text-xl md:text-2xl font-bold tracking-tight text-slate-800">
+            {isEditMode ? "Budget Bulanan" : "Set Budget Bulan Ini"}
           </h1>
-          <p className="text-xs font-medium text-slate-500 mt-0.5">{monthLabel}</p>
+          <p className="text-sm font-medium text-slate-500">{monthLabel}</p>
         </div>
       </div>
 
@@ -171,14 +165,14 @@ export function SetBudgetForm({ currentLimit, monthLabel }: SetBudgetFormProps) 
         <div suppressHydrationWarning>
           <label
             htmlFor="limitAmount-display"
-            className="mb-2.5 block text-sm font-medium text-slate-600"
+            className="mb-2 block text-sm font-semibold text-slate-700 pl-1"
           >
-            Nominal Budget
+            Batas Pengeluaran
           </label>
 
           {/* Input terlihat (berformat titik) */}
-          <div className="relative" suppressHydrationWarning>
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-400 pointer-events-none">
+          <div className="relative group" suppressHydrationWarning>
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[15px] font-bold text-slate-400 pointer-events-none group-focus-within:text-emerald-500 transition-colors">
               Rp
             </span>
             <input
@@ -193,32 +187,28 @@ export function SetBudgetForm({ currentLimit, monthLabel }: SetBudgetFormProps) 
               placeholder="0"
               required
               autoComplete="off"
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-12 pr-4 py-4 text-xl font-bold text-slate-800 placeholder:text-slate-300 focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all tracking-tight"
+              className="w-full rounded-2xl border border-slate-200 bg-white pl-12 pr-4 py-3.5 text-lg font-bold text-slate-800 placeholder:text-slate-300 focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/10 shadow-sm transition-all"
             />
           </div>
 
           {/* Preview formatted */}
           {showPreview ? (
-            <p className="mt-2 text-sm font-bold text-emerald-600">
+            <p className="mt-2 text-sm font-bold text-emerald-600 pl-1">
               = {idr.format(numericValue)}
             </p>
           ) : displayVal.length > 0 && !isValid ? (
-            <p className="mt-2 text-xs text-rose-500 font-semibold">
+            <p className="mt-2 text-xs text-rose-500 font-semibold pl-1">
               {numericValue > 1_000_000_000
                 ? "Maksimal Rp 1.000.000.000"
                 : "Masukkan angka yang valid"}
             </p>
-          ) : (
-            <p className="mt-2 text-[11px] font-semibold text-slate-400 leading-relaxed">
-              Ketik nominal, titik otomatis muncul - Berlaku untuk {monthLabel}
-            </p>
-          )}
+          ) : null}
         </div>
 
         {/* Feedback dari server */}
         {state.message && (
           <div
-            className={`rounded-[16px] border px-4 py-3 text-xs font-bold leading-relaxed ${
+            className={`rounded-2xl border px-5 py-4 text-sm font-medium animate-fade-in-up ${
               state.success
                 ? "border-emerald-200 bg-emerald-50 text-emerald-800"
                 : "border-rose-200 bg-rose-50 text-rose-800"
@@ -230,14 +220,11 @@ export function SetBudgetForm({ currentLimit, monthLabel }: SetBudgetFormProps) 
 
         <button
           type="submit"
-          disabled={pending || !isValid}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-4 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm active:scale-95 cursor-pointer"
+          disabled={pending || (!isValid && displayVal.length > 0)}
+          className="inline-flex h-12 w-full items-center justify-center gap-2.5 rounded-2xl bg-emerald-600 px-6 text-[15px] font-bold text-white transition-all active:scale-[0.96] hover:bg-emerald-500 hover:shadow-[0_8px_20px_rgba(16,185,129,0.25)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:shadow-none"
         >
-          {pending ? (
-            <Loader2 className="h-4.5 w-4.5 animate-spin text-emerald-200" />
-          ) : (
-            <Wallet className="h-4.5 w-4.5 text-white opacity-80" />
-          )}
+          {pending && <Loader2 className="size-[18px] animate-spin" />}
+          {!pending && <Wallet className="size-[18px]" />}
           {pending
             ? "Menyimpan..."
             : isEditMode

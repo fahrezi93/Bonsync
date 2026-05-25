@@ -19,6 +19,8 @@ steps:
       - 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=${_NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY}'
       - '--build-arg'
       - 'NEXT_PUBLIC_SITE_URL=${_NEXT_PUBLIC_SITE_URL}'
+      - '--build-arg'
+      - 'DATABASE_URL=${_DATABASE_URL}'
       - '-t'
       - 'gcr.io/$PROJECT_ID/bonsync-app:latest'
       - '.'

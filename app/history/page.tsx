@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { deleteExpense } from "@/actions/expense-actions";
-import { Trash2, ReceiptText, ChevronRight, Utensils, Car, ShoppingBag, Heart, Gamepad2, Receipt, Package, ScanLine, Users } from "lucide-react";
+import { Trash2, ReceiptText, ChevronRight, Receipt, ScanLine, Users } from "lucide-react";
 import { Suspense } from "react";
 import Link from "next/link";
 import { HistoryFilters } from "@/components/history-filters";
@@ -10,6 +10,7 @@ import { requireCurrentUserId } from "@/lib/auth";
 import type { Prisma } from "@prisma/client";
 import { getUserCategories } from "@/actions/category-actions";
 import { getCategoryStyle } from "@/lib/categories";
+import { ExportButtons } from "@/components/export-buttons";
 
 const idr = new Intl.NumberFormat("id-ID", {
   style: "currency",
@@ -107,18 +108,7 @@ export default async function HistoryPage({
           </p>
         </div>
         <div className="hidden md:flex items-center gap-2">
-          <a
-            href="/api/export"
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm hover:bg-slate-50 transition-transform active:scale-[0.96]"
-          >
-            Export CSV
-          </a>
-          <a
-            href="/api/export/pdf"
-            className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-slate-800 transition-transform active:scale-[0.96]"
-          >
-            Export PDF
-          </a>
+          <ExportButtons />
         </div>
       </div>
 
@@ -272,19 +262,8 @@ export default async function HistoryPage({
       )}
 
       {/* Export button — mobile only */}
-      <div className="mt-6 grid grid-cols-2 gap-3 md:hidden">
-        <a
-          href="/api/export"
-          className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-center text-sm font-bold text-slate-700 shadow-sm transition-transform active:scale-[0.96] hover:bg-slate-50"
-        >
-          Export CSV
-        </a>
-        <a
-          href="/api/export/pdf"
-          className="rounded-xl bg-slate-900 px-4 py-2.5 text-center text-sm font-bold text-white shadow-sm transition-transform active:scale-[0.96] hover:bg-slate-800"
-        >
-          Export PDF
-        </a>
+      <div className="mt-6 md:hidden">
+        <ExportButtons className="w-full grid grid-cols-2" />
       </div>
     </div>
   );

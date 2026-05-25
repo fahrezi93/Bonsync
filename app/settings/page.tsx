@@ -37,14 +37,14 @@ export default async function SettingsPage() {
   const currentRoastLevel: RoastLevel = (budget?.roastLevel as RoastLevel) ?? "MEDIUM";
 
   return (
-    <div className="mx-auto w-full h-full max-w-5xl px-6 py-8 flex flex-col gap-8 animate-fade-in-up">
+    <div className="mx-auto w-full max-w-5xl px-6 py-8 pb-32 md:pb-16 flex flex-col gap-8 flex-1 min-h-0 overflow-y-auto hide-scrollbar animate-fade-in-up">
       {/* Page Header */}
       <div className="border-b border-slate-200/50 pb-5">
         <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-800">
-          Pengaturan Akun
+          Profil Saya
         </h1>
         <p className="text-xs md:text-sm font-medium text-slate-500 mt-1">
-          Kelola budget bulanan Anda dan sesuaikan tingkat kepedasan teguran AI BonSync.
+          Kelola informasi profil, preferensi budget, kategori kustom, dan AI BonSync.
         </p>
       </div>
 

@@ -63,17 +63,17 @@ export function CustomCategoryManager({ categories }: CategoryProps) {
   };
 
   return (
-    <div className="premium-card p-6 flex flex-col gap-6 w-full animate-fade-in-up" style={{ animationDelay: "100ms" }}>
-      <div className="space-y-1">
-        <h2 className="text-xl font-bold text-slate-800">Kategori Kustom</h2>
-        <p className="text-sm text-slate-500">
-          Buat kategori khusus untuk BonSync AI agar lebih personal saat mengklasifikasikan nota belanja Anda.
+    <div className="premium-card p-6 md:p-8 flex flex-col gap-6 md:gap-8 w-full animate-fade-in-up" style={{ animationDelay: "100ms" }}>
+      <div className="flex flex-col gap-1">
+        <h2 className="text-xl md:text-2xl font-bold tracking-tight text-slate-800">Kategori Kustom</h2>
+        <p className="text-sm font-medium text-slate-500">
+          Buat kategori khusus untuk lebih personal saat mengklasifikasikan pengeluaran Anda.
         </p>
       </div>
 
-      <div className="space-y-4">
-        <h3 className="text-xs font-black uppercase tracking-wider text-slate-400 font-mono">Daftar Kategori Anda</h3>
-        <div className="flex flex-wrap gap-2">
+      <div className="flex flex-col gap-4">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 pl-1">Daftar Kategori Anda</h3>
+        <div className="flex flex-wrap gap-2.5">
           {PREDEFINED_CATEGORIES.map(c => {
             const Icon = AVAILABLE_ICONS[c.icon] || Tag;
             return (
@@ -170,16 +170,16 @@ export function CustomCategoryManager({ categories }: CategoryProps) {
         </div>
       </div>
 
-      <div className="border-t border-slate-100 pt-5">
-        <h3 className="text-xs font-black uppercase tracking-wider text-slate-400 font-mono mb-4">Tambah Kategori Baru</h3>
+      <div className="border-t border-slate-100 pt-6">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 pl-1 mb-4">Tambah Kategori Baru</h3>
         
         {errorMsg && (
-          <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-bold text-rose-700 animate-fade-in-up">
+          <div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm font-medium text-rose-700 animate-fade-in-up">
             ⚠️ {errorMsg}
           </div>
         )}
 
-        <div className="flex flex-col md:flex-row gap-3 items-end">
+        <div className="flex flex-col md:flex-row gap-4 items-end">
           <div className="flex-1 w-full space-y-2">
             <label className="text-[11px] font-bold text-slate-500 ml-1">NAMA KATEGORI</label>
             <input
@@ -187,7 +187,7 @@ export function CustomCategoryManager({ categories }: CategoryProps) {
               value={newCatName}
               onChange={(e) => setNewCatName(e.target.value)}
               placeholder="Contoh: Kucing, Skincare, dll"
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all"
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm font-medium text-slate-800 focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 shadow-sm transition-all"
             />
           </div>
           
@@ -196,7 +196,7 @@ export function CustomCategoryManager({ categories }: CategoryProps) {
             <select
               value={selectedIcon}
               onChange={(e) => setSelectedIcon(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all appearance-none"
+              className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-3.5 text-sm font-medium text-slate-800 focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 shadow-sm transition-all appearance-none"
             >
               {Object.keys(AVAILABLE_ICONS).map(iconName => (
                 <option key={iconName} value={iconName}>{iconName}</option>
@@ -209,7 +209,7 @@ export function CustomCategoryManager({ categories }: CategoryProps) {
             <select
               value={selectedColor}
               onChange={(e) => setSelectedColor(e.target.value)}
-              className={`w-full rounded-xl border px-3 py-3 text-sm font-bold focus:outline-none focus:ring-2 transition-all appearance-none ${selectedColor.split(" ")[0]} ${selectedColor.split(" ")[1]} ${selectedColor.split(" ")[2]}`}
+              className={`w-full rounded-2xl border px-3 py-3.5 text-sm font-medium focus:outline-none focus:ring-4 focus:ring-emerald-500/10 shadow-sm transition-all appearance-none ${selectedColor.split(" ")[0]} border-slate-200 bg-white text-slate-800`}
             >
               {AVAILABLE_COLORS.map((colorClass, i) => (
                 <option key={i} value={colorClass}>Warna {i + 1}</option>
@@ -221,10 +221,10 @@ export function CustomCategoryManager({ categories }: CategoryProps) {
             type="button"
             onClick={handleAdd}
             disabled={isPending || !newCatName.trim()}
-            className="w-full md:w-auto flex h-[46px] items-center justify-center gap-2 rounded-xl bg-slate-900 px-6 py-3 text-sm font-bold text-white hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full md:w-auto flex h-[46px] items-center justify-center gap-2 rounded-2xl bg-slate-900 px-6 py-3.5 text-sm font-bold text-white hover:bg-slate-800 hover:shadow-md transition-all active:scale-[0.96] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none"
           >
-            {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-            <span>Tambah</span>
+            {isPending ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
+            <span>Tambah Kategori</span>
           </button>
         </div>
       </div>

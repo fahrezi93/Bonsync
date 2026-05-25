@@ -20,7 +20,7 @@ export function MainLayoutWrapper({
 
   return (
     <main
-      className={`flex flex-col h-dvh ${
+      className={`flex flex-col h-dvh overflow-y-auto ${
         isAuthPage ? "" : "pt-[72px] pb-[72px] md:pb-0"
       }`}
     >

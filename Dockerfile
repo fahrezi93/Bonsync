@@ -34,21 +34,20 @@ COPY --from=deps /app/node_modules ./node_modules
 # Copy full source
 COPY . .
 
-# NEXT_PUBLIC_* vars MUST be present at build time.
-# Pass them as build args — actual values injected at Cloud Run deploy time.
-# We use placeholder stubs here so `next build` won't throw.
-ARG NEXT_PUBLIC_SUPABASE_URL=https://placeholder.supabase.co
-ARG NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=placeholder-anon-key
-ARG NEXT_PUBLIC_SITE_URL=https://placeholder.example.com
+# NEXT_PUBLIC_* vars MUST be present at build time — Next.js bakes them into
+# the JS bundle during `next build`. Pass real values via --build-arg when
+# running docker build (deploy.sh loads them from .env.production.deploy).
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+ARG NEXT_PUBLIC_SITE_URL
+ARG DATABASE_URL
 
 ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
 ENV NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
+ENV DATABASE_URL=$DATABASE_URL
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
-
-# Dummy DATABASE_URL placeholder for build-time Prisma verification (injected at runtime in Cloud Run)
-ENV DATABASE_URL="postgresql://postgres:placeholder@localhost:5432/placeholder?sslmode=require"
 
 # Build Next.js — requires output: 'standalone' in next.config.ts
 RUN npx next build
@@ -77,6 +76,16 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 # Copy public folder
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+
+# Prisma engines & pg native bindings are NOT auto-included in standalone output.
+# Copy them explicitly so database queries work at runtime.
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pg ./node_modules/pg
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pg-pool ./node_modules/pg-pool
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pg-protocol ./node_modules/pg-protocol
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pg-types ./node_modules/pg-types
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pgpass ./node_modules/pgpass
 
 # Cloud Run injects PORT env var; default 8080
 ENV PORT=8080

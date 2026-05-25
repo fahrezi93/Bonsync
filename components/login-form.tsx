@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, useEffect } from "react";
 import { Loader2, Mail, Lock, Eye, EyeOff, CheckCircle, RefreshCw, Sparkle } from "lucide-react";
 import {
   signIn,
@@ -19,7 +19,9 @@ export function LoginForm({ next }: LoginFormProps) {
   const [mode, setMode] = useState<"login" | "register">("login");
   const [showPassword, setShowPassword] = useState(false);
   const [showResend, setShowResend] = useState(false);
-  const [resendEmail, setResendEmail] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   const [loginState, loginAction, loginPending] = useActionState(
     signIn,
@@ -37,6 +39,14 @@ export function LoginForm({ next }: LoginFormProps) {
   const pending = loginPending || registerPending;
   const state = mode === "login" ? loginState : registerState;
   const action = mode === "login" ? loginAction : registerAction;
+
+  // Reset password saja saat ada error — email tetap dipertahankan
+  useEffect(() => {
+    if (state.error) {
+      setPassword("");
+      setConfirmPassword("");
+    }
+  }, [state.error]);
 
   // Tampilkan tombol resend jika error berisi "belum dikonfirmasi"
   const showResendButton =
@@ -150,7 +160,8 @@ export function LoginForm({ next }: LoginFormProps) {
                   autoComplete="email"
                   required
                   placeholder="kamu@email.com"
-                  onChange={(e) => setResendEmail(e.target.value)}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="w-full rounded-[16px] border border-slate-200 bg-[#fbfbfb]/80 py-3.5 pl-11 pr-4 text-xs font-semibold text-[#21164c] placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all duration-300 shadow-none"
                 />
               </div>
@@ -174,6 +185,8 @@ export function LoginForm({ next }: LoginFormProps) {
                   required
                   minLength={6}
                   placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   className="w-full rounded-[16px] border border-slate-200 bg-[#fbfbfb]/80 py-3.5 pl-11 pr-10 text-xs font-semibold text-[#21164c] placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all duration-300 shadow-none"
                 />
                 <button
@@ -210,6 +223,8 @@ export function LoginForm({ next }: LoginFormProps) {
                     required
                     minLength={6}
                     placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
                     className="w-full rounded-[16px] border border-slate-200 bg-[#fbfbfb]/80 py-3.5 pl-11 pr-4 text-xs font-semibold text-[#21164c] placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all duration-300 shadow-none"
                   />
                 </div>
@@ -263,7 +278,7 @@ export function LoginForm({ next }: LoginFormProps) {
                   name="email"
                   type="email"
                   required
-                  defaultValue={resendEmail}
+                  defaultValue={email}
                   placeholder="kamu@email.com"
                   className="flex-1 rounded-[12px] border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-[#21164c] placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all duration-300"
                 />

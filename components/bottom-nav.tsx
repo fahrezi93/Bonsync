@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, History, Wallet, MessageCircle, Camera } from "lucide-react";
+import { LayoutDashboard, History, UserRound, MessageCircle, Camera } from "lucide-react";
 
 export function BottomNav() {
   const pathname = usePathname();
@@ -56,8 +56,8 @@ export function BottomNav() {
         href="/settings"
         className={`flex flex-col items-center gap-1.5 p-1 transition-all duration-300 relative group ${pathname === "/settings" ? "text-emerald-600 scale-105" : "text-slate-400 hover:text-slate-600"}`}
       >
-        <Wallet className={`h-[20px] w-[20px] ${pathname === "/settings" ? "fill-emerald-100/55" : ""}`} strokeWidth={pathname === "/settings" ? 2.5 : 1.75} />
-        <span className="text-[10px] font-medium">Budget</span>
+        <UserRound className={`h-[20px] w-[20px] ${pathname === "/settings" ? "fill-emerald-100/55" : ""}`} strokeWidth={pathname === "/settings" ? 2.5 : 1.75} />
+        <span className="text-[10px] font-medium">Profil</span>
         {pathname === "/settings" && (
           <span className="absolute -bottom-1 w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
         )}

@@ -94,22 +94,17 @@ export function RoastLevelSelector({ currentLevel }: RoastLevelSelectorProps) {
     <div className="w-full premium-card p-6 md:p-8 relative overflow-hidden transition-all duration-300">
 
       {/* Header */}
-      <div className="mb-5 flex items-center gap-3">
-        <div className="relative flex h-9 w-9 items-center justify-center bg-gradient-to-br from-rose-400 to-amber-400 text-white rounded-xl shadow-[0_4px_12px_rgba(251,113,133,0.25)]">
-          <span className="text-lg leading-none">🌶️</span>
-        </div>
-        <div>
-          <p className="text-sm font-bold text-slate-800">
-            Tingkat Kepedasan AI
-          </p>
-          <p className="text-xs font-medium text-slate-500 mt-0.5">
-            Seberapa pedas tegurannya?
-          </p>
-        </div>
+      <div className="mb-6 flex flex-col gap-1">
+        <h2 className="text-xl md:text-2xl font-bold tracking-tight text-slate-800">
+          Level Roasting AI
+        </h2>
+        <p className="text-sm font-medium text-slate-500">
+          Pilih seberapa blak-blakan AI akan menegur gaya hidup Anda.
+        </p>
       </div>
 
       {/* Level Cards */}
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3.5">
         {levels.map((lvl) => {
           const isActive = selected === lvl.value;
           return (
@@ -119,13 +114,12 @@ export function RoastLevelSelector({ currentLevel }: RoastLevelSelectorProps) {
               onClick={() => handleSelect(lvl.value)}
               disabled={isPending}
               className={`
-                w-full text-left rounded-xl border p-4 transition-all duration-300 cursor-pointer
-                shadow-sm
+                w-full text-left rounded-2xl border p-4 transition-all duration-300 cursor-pointer
                 ${isActive
-                  ? `${lvl.borderActive} ${lvl.bgActive} shadow-md`
-                  : `border-slate-100 ${lvl.bgInactive}`
+                  ? `${lvl.borderActive} ${lvl.bgActive} shadow-sm border-2 ring-4 ring-white/50 ring-inset`
+                  : `border-slate-200 ${lvl.bgInactive} shadow-none`
                 }
-                ${isPending ? "opacity-60 cursor-not-allowed" : "active:scale-[0.98]"}
+                ${isPending ? "opacity-60 cursor-not-allowed" : "active:scale-95"}
               `}
             >
               <div className="flex items-center gap-3.5">

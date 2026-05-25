@@ -7,7 +7,7 @@ const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
 export const updateSession = async (request: NextRequest) => {
   let supabaseResponse = NextResponse.next({ request });
 
-  createServerClient(supabaseUrl, supabaseKey, {
+  const supabase = createServerClient(supabaseUrl, supabaseKey, {
     cookies: {
       getAll() {
         return request.cookies.getAll();
@@ -23,6 +23,11 @@ export const updateSession = async (request: NextRequest) => {
       },
     },
   });
+
+  // IMPORTANT: getUser() must be called to refresh the session token.
+  // Do NOT remove this — without it, cookies won't be updated and
+  // the user will appear logged out on every server-side render.
+  await supabase.auth.getUser();
 
   return supabaseResponse;
 };

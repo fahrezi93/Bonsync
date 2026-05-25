@@ -8,9 +8,22 @@ const globalForPrisma = globalThis as unknown as {
 function createPrismaClient(): PrismaClient {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
-    throw new Error("DATABASE_URL environment variable is not set.");
+    console.error(
+      "[prisma] DATABASE_URL is not set. Database queries will fail.",
+    );
+    return new PrismaClient({ log: ["error"] });
   }
-  const adapter = new PrismaPg({ connectionString });
+
+  // Supabase pooler pakai self-signed certificate.
+  // Force rejectUnauthorized: false di level pg.Pool config.
+  // Ini override apapun yang ada di connection string.
+  const adapter = new PrismaPg({
+    connectionString,
+    ssl: {
+      rejectUnauthorized: false,
+    },
+  });
+
   return new PrismaClient({
     adapter,
     log:

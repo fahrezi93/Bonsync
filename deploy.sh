@@ -9,24 +9,29 @@
 # Prerequisites:
 #   1. gcloud CLI installed & authenticated  → gcloud auth login
 #   2. Docker installed and running
-#   3. Fill in the CONFIG section below (or use environment vars)
+#   3. .env.production.deploy sudah diisi dengan nilai yang benar
 # =============================================================
 
 set -euo pipefail
 
-# ─── CONFIG (edit these values) ────────────────────────────────────────────────
+# ─── Auto-load dari .env.production.deploy ────────────────────────────────────
+ENV_FILE="$(dirname "$0")/.env.production.deploy"
+if [[ -f "$ENV_FILE" ]]; then
+  echo -e "\033[0;34m[INFO]\033[0m Loading env from .env.production.deploy"
+  set -a
+  # shellcheck disable=SC1090
+  source "$ENV_FILE"
+  set +a
+else
+  echo -e "\033[0;31m[ERROR]\033[0m .env.production.deploy not found. Copy .env.production.deploy.example and fill in the values."
+  exit 1
+fi
+
+# ─── CONFIG ───────────────────────────────────────────────────────────────────
 PROJECT_ID="${GCP_PROJECT_ID:-your-gcp-project-id}"
-REGION="${GCP_REGION:-asia-southeast2}"           # Jakarta region
+REGION="${GCP_REGION:-asia-southeast2}"
 SERVICE_NAME="${CLOUD_RUN_SERVICE:-bonsync-app}"
 IMAGE_NAME="gcr.io/${PROJECT_ID}/${SERVICE_NAME}"
-
-# ─── ENV VARS for Cloud Run (runtime secrets) ──────────────────────────────────
-DATABASE_URL="${DATABASE_URL:-}"
-NEXT_PUBLIC_SUPABASE_URL="${NEXT_PUBLIC_SUPABASE_URL:-}"
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:-}"
-NEXT_PUBLIC_SITE_URL="${NEXT_PUBLIC_SITE_URL:-https://${SERVICE_NAME}-$(gcloud config get-value project 2>/dev/null).${REGION}.run.app}"
-GEMINI_API_KEY="${GEMINI_API_KEY:-}"
-# ──────────────────────────────────────────────────────────────────────────────
 
 # Colors for output
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; NC='\033[0m'
@@ -64,6 +69,7 @@ docker build \
   --build-arg NEXT_PUBLIC_SUPABASE_URL="${NEXT_PUBLIC_SUPABASE_URL}" \
   --build-arg NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY}" \
   --build-arg NEXT_PUBLIC_SITE_URL="${NEXT_PUBLIC_SITE_URL}" \
+  --build-arg DATABASE_URL="${DATABASE_URL}" \
   -t "${IMAGE_NAME}:latest" \
   .
 

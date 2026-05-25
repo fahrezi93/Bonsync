@@ -13,15 +13,14 @@ const getGeminiKeys = () => {
   ].map((key) => key?.trim()).filter((key): key is string => typeof key === "string" && key !== "");
 };
 
-// Model text-out yang tersedia di akun saat ini. Jangan masukkan model 0/0 quota
-// seperti Pro/TTS/Imagen ke fallback generateContent teks.
+// Model text-out yang tersedia. Urutan dari yang paling ringan ke yang lebih berat.
 const DEFAULT_GEMINI_MODELS = [
-  "gemini-3.1-flash-lite",
-  "gemini-3-flash-preview",
-  "gemini-2.5-flash-lite",
+  "gemini-2.0-flash-lite",
+  "gemini-2.0-flash",
+  "gemini-2.5-flash-lite-preview-06-17",
   "gemini-2.5-flash",
-  "gemma-4-31b-it",
-  "gemma-4-26b-a4b-it",
+  "gemini-1.5-flash",
+  "gemini-1.5-flash-8b",
 ];
 
 const getGeminiModels = () => {

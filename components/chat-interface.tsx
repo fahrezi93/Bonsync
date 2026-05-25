@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useTransition } from "react";
-import { Send, Loader2, Sparkles, CheckCircle, XCircle } from "lucide-react";
+import { Send, Loader2, Sparkles, CheckCircle, XCircle, Trash2 } from "lucide-react";
 import { processChatMessage, saveChatExpense } from "@/actions/chat-actions";
 
 interface ChatMessage {
@@ -25,6 +25,49 @@ const QUICK_PROMPTS = [
   "Roasting deh pola belanjaku",
   "Kasih saran hemat dong",
 ];
+
+const STORAGE_KEY = "bonsync_chat_history";
+const MAX_STORED_MESSAGES = 50;
+
+const INITIAL_MESSAGE: ChatMessage = {
+  id: 0,
+  role: "ai",
+  content:
+    "Halo! BonSync AI di sini.\n\n" +
+    "Kamu bisa:\n" +
+    "• Lapor pengeluaran (misal: bayar parkir 2 ribu)\n" +
+    "• Minta evaluasi (misal: roasting pengeluaranku)\n\n" +
+    "Ada yang bisa dibantu?",
+};
+
+function loadMessages(): ChatMessage[] {
+  if (typeof window === "undefined") return [INITIAL_MESSAGE];
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [INITIAL_MESSAGE];
+    const parsed = JSON.parse(raw) as ChatMessage[];
+    if (!Array.isArray(parsed) || parsed.length === 0) return [INITIAL_MESSAGE];
+    // Reset semua pending expense yang belum dikonfirmasi (karena session baru)
+    return parsed.map((m) =>
+      m.pendingExpense && m.confirmed === undefined
+        ? { ...m, confirmed: "no" as const }
+        : m,
+    );
+  } catch {
+    return [INITIAL_MESSAGE];
+  }
+}
+
+function saveMessages(messages: ChatMessage[]) {
+  if (typeof window === "undefined") return;
+  try {
+    // Simpan hanya N pesan terakhir agar localStorage tidak penuh
+    const toStore = messages.slice(-MAX_STORED_MESSAGES);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(toStore));
+  } catch {
+    // localStorage penuh atau disabled — abaikan
+  }
+}
 
 function parseMarkdown(text: string): React.ReactNode {
   if (!text) return "";
@@ -63,29 +106,32 @@ interface ChatInterfaceProps {
 }
 
 export function ChatInterface({ expenseSummary }: ChatInterfaceProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: 0,
-      role: "ai",
-      content:
-        "Halo! BonSync AI di sini.\n\n" +
-        "Kamu bisa:\n" +
-        "• Lapor pengeluaran (misal: bayar parkir 2 ribu)\n" +
-        "• Minta evaluasi (misal: roasting pengeluaranku)\n\n" +
-        "Ada yang bisa dibantu?",
-    },
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>(loadMessages);
   const [input, setInput] = useState("");
   const [sending, startSend] = useTransition();
   const [savingExpense, startSaveExpense] = useTransition();
   const [lastPendingId, setLastPendingId] = useState<number | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const msgId = useRef(1);
+  const msgId = useRef(Math.max(...messages.map((m) => m.id), 0) + 1);
+
+  // Simpan ke localStorage setiap kali messages berubah
+  useEffect(() => {
+    saveMessages(messages);
+  }, [messages]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  const clearHistory = () => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+    setMessages([INITIAL_MESSAGE]);
+    setLastPendingId(null);
+    msgId.current = 1;
+  };
 
   const isConfirmReply = (text: string) =>
     /^(ya|iya|yep|ok|sip|oke|yes|betul|bener|yoi|lanjut|catat)$/i.test(text.trim());
@@ -164,6 +210,24 @@ export function ChatInterface({ expenseSummary }: ChatInterfaceProps) {
 
   return (
     <div className="flex flex-col h-full absolute inset-0 premium-card p-4 md:p-6 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+      {/* Header dengan tombol clear */}
+      <div className="flex items-center justify-between mb-3 shrink-0">
+        <p className="text-xs font-semibold text-slate-400">
+          {messages.length > 1 ? `${messages.length - 1} pesan` : "Mulai percakapan"}
+        </p>
+        {messages.length > 1 && (
+          <button
+            type="button"
+            onClick={clearHistory}
+            className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-500 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 transition-all"
+            title="Hapus riwayat chat"
+          >
+            <Trash2 className="h-3 w-3" />
+            Hapus Riwayat
+          </button>
+        )}
+      </div>
+
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto space-y-5 pb-4 pr-1 custom-scrollbar min-h-0">
         {messages.map((msg) => (

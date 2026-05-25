@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, History, Scan, MessageCircle, Wallet } from "lucide-react";
+import { LayoutDashboard, History, Scan, MessageCircle, UserRound } from "lucide-react";
 
 export function DesktopNavLinks() {
   const pathname = usePathname();
@@ -42,8 +42,8 @@ export function DesktopNavLinks() {
     },
     {
       href: "/settings",
-      label: "Budget",
-      icon: Wallet,
+      label: "Profil",
+      icon: UserRound,
       activePattern: /^\/settings/,
       hoverClass: "group-hover:rotate-12 group-hover:scale-105 group-hover:text-emerald-500",
       activeIconClass: "text-emerald-600 rotate-6",

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 
 const CATEGORIES = ["FOOD", "TRANSPORT", "LIFESTYLE", "HEALTH", "ENTERTAINMENT", "OTHERS"] as const;
 
@@ -28,6 +28,11 @@ function getMonthOptions(count = 6) {
   return options;
 }
 
+function getCurrentMonthValue() {
+  const now = new Date();
+  return new Intl.DateTimeFormat("id-ID", { month: "2-digit", year: "numeric" }).format(now);
+}
+
 export function HistoryFilters() {
   const router = useRouter();
   const pathname = usePathname();
@@ -35,6 +40,16 @@ export function HistoryFilters() {
 
   const activeCategory = searchParams.get("category") ?? "";
   const activeMonth = searchParams.get("month") ?? "";
+
+  // Default ke bulan ini saat pertama kali buka halaman (tidak ada param month)
+  useEffect(() => {
+    if (!searchParams.has("month")) {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("month", getCurrentMonthValue());
+      router.replace(`${pathname}?${params.toString()}`);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const updateParam = useCallback(
     (key: string, value: string) => {
@@ -52,6 +67,7 @@ export function HistoryFilters() {
   );
 
   const monthOptions = getMonthOptions(6);
+  const currentMonthValue = getCurrentMonthValue();
 
   return (
     <div className="mb-6 space-y-3">
@@ -76,10 +92,15 @@ export function HistoryFilters() {
             className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
               activeMonth === opt.value
                 ? "bg-slate-800 text-white"
-                : "border border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                : opt.value === currentMonthValue
+                  ? "border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                  : "border border-slate-200 bg-white text-slate-600 hover:border-slate-300"
             }`}
           >
             {opt.label}
+            {opt.value === currentMonthValue && activeMonth !== opt.value && (
+              <span className="ml-1.5 inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 align-middle" />
+            )}
           </button>
         ))}
       </div>
