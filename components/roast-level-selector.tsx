@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { setRoastLevel, type RoastLevel } from "@/actions/roast-level-actions";
-import { Leaf, Flame, Skull, CheckCircle } from "lucide-react";
+import { Leaf, Flame, Skull } from "lucide-react";
 
 interface RoastLevelSelectorProps {
   currentLevel: RoastLevel;
@@ -14,15 +14,6 @@ const levels: {
   description: string;
   emoji: string;
   icon: React.ReactNode;
-  gradientFrom: string;
-  gradientTo: string;
-  borderActive: string;
-  bgActive: string;
-  bgInactive: string;
-  textActive: string;
-  textDesc: string;
-  glowColor: string;
-  badgeStyle: string;
 }[] = [
   {
     value: "MILD",
@@ -30,15 +21,6 @@ const levels: {
     description: "Evaluasi ramah & membangun. Cocok buat yang butuh semangat.",
     emoji: "🥦",
     icon: <Leaf className="w-5 h-5" />,
-    gradientFrom: "from-emerald-400",
-    gradientTo: "to-teal-500",
-    borderActive: "border-emerald-300",
-    bgActive: "bg-emerald-50",
-    bgInactive: "bg-white hover:bg-emerald-50/50",
-    textActive: "text-emerald-700",
-    textDesc: "text-emerald-600/70",
-    glowColor: "shadow-emerald-100",
-    badgeStyle: "bg-emerald-100 text-emerald-700",
   },
   {
     value: "MEDIUM",
@@ -46,15 +28,6 @@ const levels: {
     description: "Sarkastik & gaul. Nusuk tapi masih bisa ketawa.",
     emoji: "🔥",
     icon: <Flame className="w-5 h-5" />,
-    gradientFrom: "from-amber-400",
-    gradientTo: "to-orange-500",
-    borderActive: "border-amber-300",
-    bgActive: "bg-amber-50",
-    bgInactive: "bg-white hover:bg-amber-50/50",
-    textActive: "text-amber-700",
-    textDesc: "text-amber-600/70",
-    glowColor: "shadow-amber-100",
-    badgeStyle: "bg-amber-100 text-amber-700",
   },
   {
     value: "NUCLEAR",
@@ -62,15 +35,6 @@ const levels: {
     description: "Blak-blakan total. Tidak ada ampun, tidak ada basa-basi.",
     emoji: "💀",
     icon: <Skull className="w-5 h-5" />,
-    gradientFrom: "from-rose-500",
-    gradientTo: "to-red-700",
-    borderActive: "border-rose-400",
-    bgActive: "bg-rose-50",
-    bgInactive: "bg-white hover:bg-rose-50/50",
-    textActive: "text-rose-700",
-    textDesc: "text-rose-600/70",
-    glowColor: "shadow-rose-100",
-    badgeStyle: "bg-rose-100 text-rose-700",
   },
 ];
 
@@ -94,17 +58,17 @@ export function RoastLevelSelector({ currentLevel }: RoastLevelSelectorProps) {
     <div className="w-full premium-card p-6 md:p-8 relative overflow-hidden transition-all duration-300">
 
       {/* Header */}
-      <div className="mb-6 flex flex-col gap-1">
-        <h2 className="text-xl md:text-2xl font-bold tracking-tight text-slate-800">
+      <div className="mb-8 flex flex-col gap-2">
+        <h2 className="text-xl md:text-2xl font-semibold tracking-tight text-slate-900">
           Level Roasting AI
         </h2>
-        <p className="text-sm font-medium text-slate-500">
+        <p className="text-sm text-slate-500">
           Pilih seberapa blak-blakan AI akan menegur gaya hidup Anda.
         </p>
       </div>
 
       {/* Level Cards */}
-      <div className="flex flex-col gap-3.5">
+      <div className="grid grid-cols-1 gap-4">
         {levels.map((lvl) => {
           const isActive = selected === lvl.value;
           return (
@@ -114,62 +78,58 @@ export function RoastLevelSelector({ currentLevel }: RoastLevelSelectorProps) {
               onClick={() => handleSelect(lvl.value)}
               disabled={isPending}
               className={`
-                w-full text-left rounded-2xl border p-4 transition-all duration-300 cursor-pointer
+                group w-full text-left rounded-2xl p-5 transition-all duration-300 cursor-pointer border
                 ${isActive
-                  ? `${lvl.borderActive} ${lvl.bgActive} shadow-sm border-2 ring-4 ring-white/50 ring-inset`
-                  : `border-slate-200 ${lvl.bgInactive} shadow-none`
+                  ? "border-slate-900 bg-white ring-1 ring-slate-900 shadow-sm"
+                  : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50"
                 }
-                ${isPending ? "opacity-60 cursor-not-allowed" : "active:scale-95"}
+                ${isPending ? "opacity-60 cursor-not-allowed" : "active:scale-[0.99]"}
               `}
             >
-              <div className="flex items-center gap-3.5">
-                {/* Icon gradient bubble */}
+              <div className="flex items-start gap-4 md:gap-5">
+                {/* Icon */}
                 <div
                   className={`
-                    flex items-center justify-center w-10 h-10 rounded-lg text-white shrink-0
-                    bg-gradient-to-br ${lvl.gradientFrom} ${lvl.gradientTo}
-                    shadow-sm
-                    transition-all duration-300
-                    ${isActive ? "scale-105" : "opacity-70"}
+                    flex items-center justify-center w-12 h-12 rounded-2xl shrink-0 text-white transition-all
+                    ${isActive ? "bg-slate-900 scale-105" : "bg-slate-800 opacity-90 group-hover:opacity-100 group-hover:scale-105"}
                   `}
                 >
                   {lvl.icon}
                 </div>
 
                 {/* Text */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span
-                      className={`text-sm font-bold transition-colors ${
-                        isActive ? lvl.textActive : "text-slate-700"
-                      }`}
-                    >
-                      {lvl.emoji} {lvl.label}
-                    </span>
-                    {isActive && (
+                <div className="flex-1 min-w-0 pt-0.5">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <div className="flex items-center gap-3">
                       <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${lvl.badgeStyle}`}
+                        className={`text-base font-semibold ${
+                          isActive ? "text-slate-900" : "text-slate-700 group-hover:text-slate-900"
+                        }`}
                       >
-                        Aktif
+                        {lvl.emoji} {lvl.label}
                       </span>
-                    )}
+                      {isActive && (
+                        <span
+                          className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-900 text-white"
+                        >
+                          Aktif
+                        </span>
+                      )}
+                    </div>
+                    {/* Checkmark */}
+                    <div className={`
+                      w-5 h-5 rounded-full border flex items-center justify-center transition-colors shrink-0
+                      ${isActive ? "border-slate-900 bg-slate-900" : "border-slate-300 group-hover:border-slate-400"}
+                    `}>
+                      {isActive && <div className="w-2 h-2 rounded-full bg-white" />}
+                    </div>
                   </div>
                   <p
-                    className={`text-xs font-medium leading-snug transition-colors ${
-                      isActive ? lvl.textDesc : "text-slate-400"
-                    }`}
+                    className="text-sm text-slate-500 leading-snug"
                   >
                     {lvl.description}
                   </p>
                 </div>
-
-                {/* Checkmark */}
-                {isActive && (
-                  <CheckCircle
-                    className={`w-5 h-5 shrink-0 ${lvl.textActive}`}
-                    strokeWidth={2.5}
-                  />
-                )}
               </div>
             </button>
           );
@@ -180,11 +140,11 @@ export function RoastLevelSelector({ currentLevel }: RoastLevelSelectorProps) {
       {toast && (
         <div
           className={`
-            mt-4 flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs font-medium
+            mt-5 flex items-center gap-2.5 px-4 py-3 rounded-xl text-sm font-medium
             transition-all duration-300 animate-fade-in-up
             ${toast.success
-              ? "bg-emerald-50 border border-emerald-200 text-emerald-700"
-              : "bg-rose-50 border border-rose-200 text-rose-700"
+              ? "bg-emerald-50 text-emerald-700"
+              : "bg-rose-50 text-rose-700"
             }
           `}
         >
@@ -195,9 +155,9 @@ export function RoastLevelSelector({ currentLevel }: RoastLevelSelectorProps) {
 
       {/* Pending indicator */}
       {isPending && (
-        <div className="absolute inset-0 bg-white/40 backdrop-blur-sm rounded-[32px] flex items-center justify-center">
-          <div className="flex items-center gap-2 text-[12px] font-bold text-slate-500">
-            <span className="w-4 h-4 rounded-full border-2 border-slate-300 border-t-slate-600 animate-spin" />
+        <div className="absolute inset-0 bg-white/50 backdrop-blur-[2px] rounded-[24px] flex items-center justify-center z-10">
+          <div className="flex items-center gap-2.5 px-4 py-2 bg-white rounded-full shadow-sm border border-slate-200 text-sm font-medium text-slate-600">
+            <span className="w-4 h-4 rounded-full border-2 border-slate-200 border-t-slate-800 animate-spin" />
             Menyimpan...
           </div>
         </div>

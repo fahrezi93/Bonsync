@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { toPng } from "html-to-image";
 import { Loader2, Share2, Download, X, Sparkles, Check } from "lucide-react";
 import type { RoastLevel, RoastPersona } from "@/lib/roasting";
@@ -27,38 +28,43 @@ const LEVEL_THEME: Record<
   {
     label: string;
     emoji: string;
-    /** Gradient background utama untuk card */
-    gradient: string;
-    /** Decorative accent ring */
-    accentColor: string;
-    /** Color text utama untuk badge level */
+    bg: string;
+    text: string;
+    border: string;
     badgeBg: string;
     badgeText: string;
+    statsBg: string;
   }
 > = {
   MILD: {
     label: "Mode Sopan",
     emoji: "🥦",
-    gradient: "linear-gradient(135deg, #10b981 0%, #34d399 60%, #6ee7b7 100%)",
-    accentColor: "rgba(16, 185, 129, 0.5)",
-    badgeBg: "rgba(255, 255, 255, 0.2)",
-    badgeText: "#ffffff",
+    bg: "#ffffff",
+    text: "#0f172a",
+    border: "#e2e8f0",
+    badgeBg: "#f8fafc",
+    badgeText: "#334155",
+    statsBg: "#f8fafc",
   },
   MEDIUM: {
     label: "Mode Pedas",
     emoji: "🔥",
-    gradient: "linear-gradient(135deg, #f97316 0%, #fb923c 50%, #fbbf24 100%)",
-    accentColor: "rgba(249, 115, 22, 0.5)",
-    badgeBg: "rgba(255, 255, 255, 0.2)",
-    badgeText: "#ffffff",
+    bg: "#ffffff",
+    text: "#0f172a",
+    border: "#e2e8f0",
+    badgeBg: "#f8fafc",
+    badgeText: "#334155",
+    statsBg: "#f8fafc",
   },
   NUCLEAR: {
     label: "Mode Nuklir",
     emoji: "💀",
-    gradient: "linear-gradient(135deg, #1e1b4b 0%, #7c1d6f 50%, #be123c 100%)",
-    accentColor: "rgba(190, 18, 60, 0.6)",
-    badgeBg: "rgba(255, 255, 255, 0.15)",
-    badgeText: "#ffffff",
+    bg: "#0f172a",
+    text: "#f8fafc",
+    border: "#1e293b",
+    badgeBg: "#1e293b",
+    badgeText: "#f1f5f9",
+    statsBg: "#1e293b",
   },
 };
 
@@ -88,6 +94,7 @@ export function ShareRoastButton(props: ShareRoastButtonProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const previewWrapRef = useRef<HTMLDivElement>(null);
 
+  const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [dataUrl, setDataUrl] = useState<string | null>(null);
@@ -100,6 +107,10 @@ export function ShareRoastButton(props: ShareRoastButtonProps) {
   const personaMeta = PERSONA_LABEL[persona];
   const score = Math.max(0, Math.min(100, Math.round(survivalScore)));
   const userName = (displayName || "Vibe Coder").trim();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   /* ─── Lock body scroll saat modal open ─── */
   useEffect(() => {
@@ -235,7 +246,7 @@ export function ShareRoastButton(props: ShareRoastButtonProps) {
         Bagikan
       </button>
 
-      {open && (
+      {open && mounted && createPortal(
         <div
           className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-slate-950/75 backdrop-blur-sm animate-fade-in-up"
           onMouseDown={(e) => {
@@ -290,48 +301,21 @@ export function ShareRoastButton(props: ShareRoastButtonProps) {
                   ref={cardRef}
                   style={{
                     width: CARD_EXPORT_WIDTH,
-                    background: theme.gradient,
-                    color: "#ffffff",
+                    background: theme.bg,
+                    color: theme.text,
                     fontFamily:
                       'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                    borderRadius: 28,
-                    padding: 28,
+                    borderRadius: 32,
+                    padding: 32,
                     position: "absolute",
                     top: 0,
                     left: 0,
                     overflow: "hidden",
-                    boxShadow: "0 24px 64px rgba(0,0,0,0.18)",
+                    border: `1px solid ${theme.border}`,
                     transform: `scale(${previewScale})`,
                     transformOrigin: "top left",
                   }}
                 >
-                  {/* Decorative blob */}
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: -60,
-                      right: -60,
-                      width: 240,
-                      height: 240,
-                      borderRadius: "50%",
-                      background: theme.accentColor,
-                      filter: "blur(40px)",
-                      opacity: 0.6,
-                    }}
-                  />
-                  <div
-                    style={{
-                      position: "absolute",
-                      bottom: -90,
-                      left: -50,
-                      width: 220,
-                      height: 220,
-                      borderRadius: "50%",
-                      background: "rgba(255,255,255,0.08)",
-                      filter: "blur(50px)",
-                    }}
-                  />
-
                   {/* Header brand */}
                   <div
                     style={{
@@ -339,7 +323,7 @@ export function ShareRoastButton(props: ShareRoastButtonProps) {
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
-                      marginBottom: 22,
+                      marginBottom: 24,
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -347,8 +331,9 @@ export function ShareRoastButton(props: ShareRoastButtonProps) {
                         style={{
                           width: 32,
                           height: 32,
-                          borderRadius: 10,
-                          background: "rgba(255,255,255,0.22)",
+                          borderRadius: 8,
+                          background: theme.badgeBg,
+                          border: `1px solid ${theme.border}`,
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
@@ -356,21 +341,22 @@ export function ShareRoastButton(props: ShareRoastButtonProps) {
                           lineHeight: 1,
                         }}
                       >
-                        💸
+                        <Sparkles size={16} color={theme.badgeText} />
                       </div>
-                      <span style={{ fontSize: 14, fontWeight: 800, letterSpacing: -0.2 }}>
+                      <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: -0.5 }}>
                         BonSync
                       </span>
                     </div>
                     <span
                       style={{
-                        fontSize: 10,
-                        fontWeight: 800,
-                        padding: "5px 11px",
+                        fontSize: 11,
+                        fontWeight: 700,
+                        padding: "6px 12px",
                         borderRadius: 999,
                         background: theme.badgeBg,
                         color: theme.badgeText,
-                        letterSpacing: 0.6,
+                        border: `1px solid ${theme.border}`,
+                        letterSpacing: 0.2,
                         textTransform: "uppercase",
                       }}
                     >
@@ -381,111 +367,100 @@ export function ShareRoastButton(props: ShareRoastButtonProps) {
                   {/* Persona badge */}
                   <div
                     style={{
-                      position: "relative",
                       display: "inline-flex",
                       alignItems: "center",
                       gap: 6,
                       padding: "6px 12px",
-                      background: "rgba(255,255,255,0.18)",
+                      background: theme.badgeBg,
+                      border: `1px solid ${theme.border}`,
                       borderRadius: 999,
-                      fontSize: 11,
-                      fontWeight: 700,
-                      marginBottom: 18,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      marginBottom: 24,
                     }}
                   >
-                    <span style={{ fontSize: 14, lineHeight: 1 }}>{personaMeta.emoji}</span>
-                    Persona: {personaMeta.label}
+                    <span style={{ fontSize: 14 }}>{personaMeta.emoji}</span>
+                    <span style={{ color: theme.badgeText }}>Persona: {personaMeta.label}</span>
                   </div>
 
                   {/* The actual roast quote */}
                   <div
                     style={{
                       position: "relative",
-                      fontSize: 20,
-                      lineHeight: 1.4,
-                      fontWeight: 700,
-                      letterSpacing: -0.3,
-                      minHeight: 110,
-                      marginBottom: 22,
+                      fontSize: 22,
+                      lineHeight: 1.5,
+                      fontWeight: 600,
+                      letterSpacing: -0.5,
+                      minHeight: 140,
+                      marginBottom: 32,
+                      color: theme.text,
                     }}
                   >
-                    <span
-                      style={{
-                        position: "absolute",
-                        top: -22,
-                        left: -8,
-                        fontSize: 64,
-                        lineHeight: 1,
-                        opacity: 0.35,
-                        fontFamily: "Georgia, serif",
-                      }}
-                    >
-                      “
-                    </span>
-                    <span style={{ position: "relative" }}>{advice || "Belum ada roasting."}</span>
+                    “ {advice || "Belum ada roasting."} ”
                   </div>
 
                   {/* Stats grid */}
                   <div
                     style={{
-                      position: "relative",
                       display: "grid",
                       gridTemplateColumns: "1fr 1fr",
-                      gap: 12,
-                      marginBottom: 22,
+                      gap: 16,
+                      marginBottom: 32,
                     }}
                   >
                     <div
                       style={{
-                        background: "rgba(255,255,255,0.16)",
-                        borderRadius: 16,
-                        padding: "12px 14px",
+                        background: theme.statsBg,
+                        border: `1px solid ${theme.border}`,
+                        borderRadius: 20,
+                        padding: "16px",
                       }}
                     >
                       <div
                         style={{
-                          fontSize: 9,
-                          fontWeight: 800,
-                          opacity: 0.85,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          opacity: 0.7,
                           textTransform: "uppercase",
-                          letterSpacing: 0.7,
-                          marginBottom: 5,
+                          letterSpacing: 0.5,
+                          marginBottom: 8,
                         }}
                       >
                         Survival
                       </div>
-                      <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: -0.5, lineHeight: 1 }}>
+                      <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: -1, lineHeight: 1 }}>
                         {score}
-                        <span style={{ fontSize: 12, fontWeight: 700, opacity: 0.85, marginLeft: 3 }}>
+                        <span style={{ fontSize: 14, fontWeight: 600, opacity: 0.5, marginLeft: 4 }}>
                           / 100
                         </span>
                       </div>
                     </div>
                     <div
                       style={{
-                        background: "rgba(255,255,255,0.16)",
-                        borderRadius: 16,
-                        padding: "12px 14px",
+                        background: theme.statsBg,
+                        border: `1px solid ${theme.border}`,
+                        borderRadius: 20,
+                        padding: "16px",
                       }}
                     >
                       <div
                         style={{
-                          fontSize: 9,
-                          fontWeight: 800,
-                          opacity: 0.85,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          opacity: 0.7,
                           textTransform: "uppercase",
-                          letterSpacing: 0.7,
-                          marginBottom: 5,
+                          letterSpacing: 0.5,
+                          marginBottom: 8,
                         }}
                       >
                         Sisa Saldo
                       </div>
                       <div
                         style={{
-                          fontSize: 18,
+                          fontSize: 20,
                           fontWeight: 800,
                           letterSpacing: -0.5,
-                          lineHeight: 1.1,
+                          lineHeight: 1.4,
                           whiteSpace: "nowrap",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
@@ -499,16 +474,14 @@ export function ShareRoastButton(props: ShareRoastButtonProps) {
                   {/* Footer */}
                   <div
                     style={{
-                      position: "relative",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
-                      fontSize: 11,
-                      fontWeight: 700,
-                      opacity: 0.9,
-                      paddingTop: 14,
-                      borderTop: "1px solid rgba(255,255,255,0.18)",
-                      gap: 10,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      opacity: 0.6,
+                      paddingTop: 20,
+                      borderTop: `1px solid ${theme.border}`,
                     }}
                   >
                     <span
@@ -516,13 +489,11 @@ export function ShareRoastButton(props: ShareRoastButtonProps) {
                         whiteSpace: "nowrap",
                         overflow: "hidden",
                         textOverflow: "ellipsis",
-                        flex: 1,
-                        minWidth: 0,
                       }}
                     >
                       {userName} · {monthLabel}
                     </span>
-                    <span style={{ letterSpacing: 0.5, flexShrink: 0 }}>bonsync.app</span>
+                    <span style={{ letterSpacing: 0.5 }}>bonsync.app</span>
                   </div>
                 </div>
               </div>
@@ -575,7 +546,8 @@ export function ShareRoastButton(props: ShareRoastButtonProps) {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/prisma";
-import { SetBudgetForm } from "@/components/set-budget-form";
 import { SurvivalScore } from "@/components/survival-score";
 import { CategoryPieChart } from "@/components/category-pie-chart";
 import { RoastingCard } from "@/components/roasting-card";
@@ -9,6 +8,7 @@ import { getCurrentUserId } from "@/lib/auth";
 import { getProfileMetadata } from "@/lib/profile";
 import { createClient } from "@/utils/supabase/server";
 import { LandingPage } from "@/components/landing/landing-page";
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import Link from "next/link";
 import { Utensils, Car, ShoppingBag, Receipt, ChevronRight, Wallet } from "lucide-react";
@@ -163,7 +163,9 @@ export default async function HomePage() {
   }
 
   if (data.needsBudget) {
-    return <SetBudgetForm monthLabel={data.monthLabel!} />;
+    // Belum onboarding → redirect ke route onboarding terpisah supaya
+    // server action di tiap step bisa revalidate tanpa unmount client component.
+    redirect("/onboarding");
   }
 
   const score = data.survivalScore!;

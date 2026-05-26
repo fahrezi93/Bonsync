@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "supabase:smtp": "node scripts/configure-supabase-smtp.mjs",
-    "gemini:models": "node scripts/list-gemini-models.mjs"
+    "gemini:models": "node scripts/list-gemini-models.mjs",
+    "reset-onboarding": "node scripts/reset-onboarding.mjs",
+    "list-users": "node scripts/list-users.mjs"
   },
   "dependencies": {
     "@google/genai": "^1.52.0",

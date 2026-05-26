@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useActionState, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Loader2, Wallet } from "lucide-react";
 import { setBudget, type BudgetActionState } from "@/actions/budget-actions";
 
@@ -9,6 +9,8 @@ const initialState: BudgetActionState = { success: false, message: "" };
 interface SetBudgetFormProps {
   currentLimit?: number;
   monthLabel: string;
+  /** Optional callback fired once after a successful save. */
+  onSaved?: () => void;
 }
 
 /** Format angka jadi "1.000.000" (titik = pemisah ribuan Indonesia) */
@@ -54,10 +56,19 @@ const idr = new Intl.NumberFormat("id-ID", {
   maximumFractionDigits: 0,
 });
 
-export function SetBudgetForm({ currentLimit, monthLabel }: SetBudgetFormProps) {
+export function SetBudgetForm({ currentLimit, monthLabel, onSaved }: SetBudgetFormProps) {
   const [state, formAction, pending] = useActionState(setBudget, initialState);
   const inputRef = useRef<HTMLInputElement>(null);
   const pendingCaretDigitsRef = useRef<number | null>(null);
+  const onSavedFiredRef = useRef(false);
+
+  // Fire onSaved callback once after a successful save.
+  useEffect(() => {
+    if (state.success && onSaved && !onSavedFiredRef.current) {
+      onSavedFiredRef.current = true;
+      onSaved();
+    }
+  }, [state.success, onSaved]);
 
   // Display value: berformat titik (e.g. "1.000.000")
   const [displayVal, setDisplayVal] = useState<string>(
