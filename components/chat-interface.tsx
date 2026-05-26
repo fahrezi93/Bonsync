@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useTransition } from "react";
-import { Send, Loader2, Sparkles, CheckCircle, XCircle, Trash2 } from "lucide-react";
+import { Send, Loader2, Sparkles, CheckCircle, XCircle, Trash2, Mic, MicOff } from "lucide-react";
 import { processChatMessage, saveChatExpense } from "@/actions/chat-actions";
 
 interface ChatMessage {
@@ -105,6 +105,36 @@ interface ChatInterfaceProps {
   expenseSummary: string;
 }
 
+/* ─── Web Speech API typings (minimal) ─── */
+interface SpeechRecognitionEventLike {
+  results: ArrayLike<ArrayLike<{ transcript: string }>>;
+}
+interface SpeechRecognitionErrorEventLike {
+  error: string;
+  message?: string;
+}
+interface SpeechRecognitionLike {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  onresult: ((e: SpeechRecognitionEventLike) => void) | null;
+  onerror: ((e: SpeechRecognitionErrorEventLike) => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+  abort: () => void;
+}
+type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
+
+function getSpeechRecognitionCtor(): SpeechRecognitionConstructor | null {
+  if (typeof window === "undefined") return null;
+  const w = window as unknown as {
+    SpeechRecognition?: SpeechRecognitionConstructor;
+    webkitSpeechRecognition?: SpeechRecognitionConstructor;
+  };
+  return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
+}
+
 export function ChatInterface({ expenseSummary }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<ChatMessage[]>(loadMessages);
   const [input, setInput] = useState("");
@@ -114,6 +144,89 @@ export function ChatInterface({ expenseSummary }: ChatInterfaceProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const msgId = useRef(Math.max(...messages.map((m) => m.id), 0) + 1);
+
+  /* ─── Voice Input (Web Speech API) ─── */
+  const [voiceSupported, setVoiceSupported] = useState(false);
+  const [listening, setListening] = useState(false);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+
+  useEffect(() => {
+    setVoiceSupported(getSpeechRecognitionCtor() !== null);
+    return () => {
+      // Cleanup recognition saat component unmount
+      try {
+        recognitionRef.current?.abort();
+      } catch {
+        // ignore
+      }
+    };
+  }, []);
+
+  function startListening() {
+    setVoiceError(null);
+    const Ctor = getSpeechRecognitionCtor();
+    if (!Ctor) {
+      setVoiceError("Browser kamu belum support voice input.");
+      return;
+    }
+    try {
+      const recognition = new Ctor();
+      recognition.lang = "id-ID";
+      recognition.continuous = false;
+      recognition.interimResults = false;
+
+      recognition.onresult = (event) => {
+        const first = event.results?.[0]?.[0];
+        const transcript = first?.transcript?.trim() ?? "";
+        if (transcript) {
+          // Append ke input agar user masih bisa edit sebelum kirim
+          setInput((prev) => (prev ? `${prev} ${transcript}` : transcript));
+        }
+      };
+      recognition.onerror = (e) => {
+        const reason = e.error;
+        const niceMessage =
+          reason === "no-speech"
+            ? "Nggak kedengeran suaramu, coba lagi ya."
+            : reason === "not-allowed" || reason === "service-not-allowed"
+              ? "Akses mikrofon ditolak. Izinkan di pengaturan browser."
+              : reason === "audio-capture"
+                ? "Mikrofon tidak terdeteksi."
+                : `Voice error: ${reason}`;
+        setVoiceError(niceMessage);
+        setListening(false);
+      };
+      recognition.onend = () => {
+        setListening(false);
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
+      setListening(true);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Gagal memulai voice input.";
+      setVoiceError(msg);
+      setListening(false);
+    }
+  }
+
+  function stopListening() {
+    try {
+      recognitionRef.current?.stop();
+    } catch {
+      // ignore
+    }
+    setListening(false);
+  }
+
+  function toggleListening() {
+    if (listening) {
+      stopListening();
+    } else {
+      startListening();
+    }
+  }
 
   // Simpan ke localStorage setiap kali messages berubah
   useEffect(() => {
@@ -330,18 +443,54 @@ export function ChatInterface({ expenseSummary }: ChatInterfaceProps) {
         ))}
       </div>
 
+      {/* Voice error toast */}
+      {voiceError && (
+        <div className="mb-2 mx-1 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-[11px] font-bold text-rose-700 animate-fade-in-up shrink-0">
+          ⚠️ {voiceError}
+        </div>
+      )}
+
+      {/* Listening indicator */}
+      {listening && (
+        <div className="mb-2 mx-1 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-[11px] font-bold text-emerald-700 flex items-center gap-2 animate-fade-in-up shrink-0">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+          </span>
+          Mendengarkan... ngomong aja, contoh: &ldquo;bayar parkir 2 ribu&rdquo;
+        </div>
+      )}
+
       {/* Input bar */}
-      <div className="flex gap-3 pt-4 pb-1 shrink-0 border-t border-slate-100 bg-white">
+      <div className="flex gap-2 pt-4 pb-1 shrink-0 border-t border-slate-100 bg-white">
         <input
           ref={inputRef}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
-          placeholder="Ketik pesan..."
+          placeholder={listening ? "Mendengarkan suaramu..." : "Ketik atau tap mic untuk bicara..."}
           disabled={sending || savingExpense}
-          className="flex-1 rounded-full border border-slate-200 bg-slate-50 px-5 py-3 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 focus:border-slate-300 disabled:opacity-60 transition-all"
+          className="flex-1 rounded-full border border-slate-200 bg-slate-50 px-5 py-3 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 focus:border-slate-300 disabled:opacity-60 transition-all min-w-0"
           id="chat-input"
         />
+
+        {voiceSupported && (
+          <button
+            type="button"
+            onClick={toggleListening}
+            disabled={sending || savingExpense}
+            id="chat-voice-btn"
+            aria-label={listening ? "Stop merekam" : "Mulai voice input"}
+            className={`shrink-0 w-12 h-12 flex items-center justify-center rounded-full transition-all active:scale-95 shadow-sm ${
+              listening
+                ? "bg-rose-500 text-white hover:bg-rose-600 ring-4 ring-rose-100"
+                : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+            } disabled:opacity-50 disabled:cursor-not-allowed`}
+          >
+            {listening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+          </button>
+        )}
+
         <button
           type="button"
           onClick={() => sendMessage()}

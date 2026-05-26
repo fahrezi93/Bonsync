@@ -15,6 +15,8 @@ import {
   Sparkles,
   Upload,
   Scan,
+  Zap,
+  RotateCcw,
 } from "lucide-react";
 import {
   extractReceiptDraft,
@@ -216,6 +218,40 @@ export function ScanFlow() {
       };
     });
   };
+
+  /**
+   * Assign semua item ke semua participants sekaligus.
+   * Kalau hanya 2 orang (Saya + 1 teman) → setiap item dibagi 50/50.
+   * Kalau N orang → setiap item dibagi rata ke N orang.
+   */
+  const assignAll = () => {
+    if (!draft || participants.length === 0) return;
+    const next: SplitAssignments = {};
+    draft.items.forEach((_, idx) => {
+      next[idx] = [...participants];
+    });
+    setAssignments(next);
+  };
+
+  /** Reset semua assignment ke kosong */
+  const clearAll = () => {
+    setAssignments({});
+  };
+
+  /**
+   * Cek apakah semua item sudah di-assign ke semua participants
+   * (kondisi "bagi rata semua" aktif).
+   */
+  const isAllAssignedToAll = (() => {
+    if (!draft || draft.items.length === 0 || participants.length === 0) return false;
+    return draft.items.every((_, idx) => {
+      const owners = assignments[idx] ?? [];
+      return (
+        owners.length === participants.length &&
+        participants.every((p) => owners.includes(p))
+      );
+    });
+  })();
 
   const handleChooseMode = (chosen: "self" | "split") => {
     setMode(chosen);
@@ -643,23 +679,128 @@ export function ScanFlow() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
-          {/* Left Column: Item assignment */}
-          <div className="md:col-span-7 flex flex-col gap-4 order-2 md:order-1">
-            <div className="px-2">
-              <h2 className="text-lg font-bold text-slate-800">Bagi Tagihan</h2>
-              <p className="text-sm text-slate-500">Pilih siapa saja yang patungan untuk tiap item.</p>
+          {/* ── PARTISIPAN ── mobile: order-1 (atas), desktop: kolom kanan baris 1 */}
+          <div className="md:col-span-5 md:row-start-1 flex flex-col gap-6 order-1 md:order-2">
+            <div className="premium-card p-5 space-y-4">
+              <p className="text-[11px] font-black uppercase tracking-wider text-slate-400 font-mono">Daftar Partisipan</p>
+              <div className="flex flex-wrap gap-2">
+                <span className="rounded-xl bg-emerald-50 px-3 py-1.5 text-[11px] font-bold text-emerald-700 border border-emerald-100">
+                  {SELF_NAME} (kamu)
+                </span>
+                {friends.map((f) => (
+                  <button
+                    key={f}
+                    type="button"
+                    onClick={() => removeFriend(f)}
+                    className="group rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-bold text-slate-600 hover:bg-rose-50 hover:border-rose-200 hover:text-rose-600 transition-colors cursor-pointer select-none animate-fade-in-up flex items-center gap-1"
+                  >
+                    <span>{f}</span>
+                    <span className="text-slate-400 group-hover:text-rose-500">×</span>
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <input
+                  value={friendInput}
+                  onChange={(e) => setFriendInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && addFriend()}
+                  placeholder="Ketik nama teman (Enter)"
+                  className="flex-1 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white px-3.5 py-2.5 text-[13px] font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-colors"
+                />
+                <button
+                  type="button"
+                  onClick={addFriend}
+                  className="rounded-xl bg-slate-800 px-4 py-2.5 text-white hover:bg-slate-900 transition-colors flex items-center justify-center cursor-pointer select-none active:scale-95"
+                >
+                  <Plus className="h-4 w-4" strokeWidth={3} />
+                </button>
+              </div>
             </div>
+          </div>
+
+          {/* ── ITEM LIST ── mobile: order-2, desktop: kolom kiri span 2 baris */}
+          <div className="md:col-span-7 md:row-start-1 md:row-span-2 flex flex-col gap-4 order-2 md:order-1">
+            <div className="px-2 flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold text-slate-800">Bagi Tagihan</h2>
+                <p className="text-sm text-slate-500">Pilih siapa saja yang patungan untuk tiap item.</p>
+              </div>
+
+              {/* Shortcut buttons — hanya tampil kalau ada minimal 1 teman */}
+              {friends.length > 0 && (
+                <div className="flex items-center gap-2 shrink-0 mt-0.5">
+                  {!isAllAssignedToAll ? (
+                    <button
+                      type="button"
+                      onClick={assignAll}
+                      className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 text-[11px] font-bold transition-all active:scale-95 shadow-sm"
+                      title={`Assign semua item ke semua ${participants.length} orang (bagi rata)`}
+                    >
+                      <Zap className="h-3.5 w-3.5" strokeWidth={2.5} />
+                      Bagi Rata
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={clearAll}
+                      className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 px-3.5 py-2 text-[11px] font-bold transition-all active:scale-95"
+                      title="Reset semua assignment"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" strokeWidth={2.5} />
+                      Reset
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Info banner kalau belum ada teman */}
+            {friends.length === 0 && (
+              <div className="mx-2 rounded-2xl border border-amber-200/70 bg-amber-50/60 px-4 py-3 flex items-center gap-3">
+                <Users className="h-4 w-4 text-amber-600 shrink-0" />
+                <p className="text-[12px] font-bold text-amber-700">
+                  Tambah nama teman dulu di atas, baru bisa bagi item.
+                </p>
+              </div>
+            )}
             
             <div className="premium-card p-3 md:p-4 flex flex-col gap-3">
             {draft.items.map((item, idx) => {
               const owners = assignments[idx] ?? [];
               const perOwner = owners.length > 0 ? item.price / owners.length : 0;
               const unassigned = owners.length === 0;
+              const isEvenSplit =
+                owners.length === participants.length &&
+                participants.length >= 2 &&
+                participants.every((p) => owners.includes(p));
+              const splitLabel =
+                owners.length === 2 && isEvenSplit
+                  ? "50:50"
+                  : owners.length >= 2 && isEvenSplit
+                    ? `Rata (${owners.length} orang)`
+                    : null;
+
               return (
-                <div key={`${idx}-${item.itemName}`} className={`rounded-[16px] border p-3.5 space-y-3 transition-colors ${unassigned ? "border-amber-200/60 bg-amber-50/30" : "border-slate-100 bg-slate-50/30 hover:border-slate-200"}`}>
+                <div
+                  key={`${idx}-${item.itemName}`}
+                  className={`rounded-[16px] border p-3.5 space-y-3 transition-colors ${
+                    unassigned
+                      ? "border-amber-200/60 bg-amber-50/30"
+                      : isEvenSplit
+                        ? "border-emerald-200/60 bg-emerald-50/20"
+                        : "border-slate-100 bg-slate-50/30 hover:border-slate-200"
+                  }`}
+                >
                   <div className="flex justify-between items-start gap-3">
                     <span className="text-[13px] font-bold text-slate-800 leading-snug">{item.itemName}</span>
-                    <span className="text-[13px] font-black text-slate-800 shrink-0">{idr.format(item.price)}</span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {splitLabel && (
+                        <span className="rounded-full bg-emerald-500 text-white text-[10px] font-black px-2.5 py-0.5 tracking-wide">
+                          {splitLabel}
+                        </span>
+                      )}
+                      <span className="text-[13px] font-black text-slate-800">{idr.format(item.price)}</span>
+                    </div>
                   </div>
                   
                   <div className="flex flex-wrap gap-2">
@@ -693,47 +834,8 @@ export function ScanFlow() {
             </div>
           </div>
 
-          {/* Right Column: Friends, summary, transfer note & save actions */}
-          <div className="md:col-span-5 flex flex-col gap-6 order-1 md:order-2">
-            
-            {/* Friend management */}
-            <div className="premium-card p-5 space-y-4">
-              <p className="text-[11px] font-black uppercase tracking-wider text-slate-400 font-mono">Daftar Partisipan</p>
-              
-              <div className="flex flex-wrap gap-2">
-                <span className="rounded-xl bg-emerald-50 px-3 py-1.5 text-[11px] font-bold text-emerald-700 border border-emerald-100">
-                  {SELF_NAME} (kamu)
-                </span>
-                {friends.map((f) => (
-                  <button
-                    key={f}
-                    type="button"
-                    onClick={() => removeFriend(f)}
-                    className="group rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-bold text-slate-600 hover:bg-rose-50 hover:border-rose-200 hover:text-rose-600 transition-colors cursor-pointer select-none animate-fade-in-up flex items-center gap-1"
-                  >
-                    <span>{f}</span>
-                    <span className="text-slate-400 group-hover:text-rose-500">×</span>
-                  </button>
-                ))}
-              </div>
-              
-              <div className="flex gap-2">
-                <input
-                  value={friendInput}
-                  onChange={(e) => setFriendInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && addFriend()}
-                  placeholder="Ketik nama teman (Enter)"
-                  className="flex-1 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white px-3.5 py-2.5 text-[13px] font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-colors"
-                />
-                <button
-                  type="button"
-                  onClick={addFriend}
-                  className="rounded-xl bg-slate-800 px-4 py-2.5 text-white hover:bg-slate-900 transition-colors flex items-center justify-center cursor-pointer select-none active:scale-95"
-                >
-                  <Plus className="h-4 w-4" strokeWidth={3} />
-                </button>
-              </div>
-            </div>
+          {/* ── SUMMARY + ACTIONS ── mobile: order-3 (bawah), desktop: kolom kanan baris 2 */}
+          <div className="md:col-span-5 md:row-start-2 flex flex-col gap-6 order-3 md:order-2">
 
             {/* Summary bagianku */}
             {selfTotal > 0 && (() => {
@@ -766,9 +868,7 @@ export function ScanFlow() {
                         <span>+ {idr.format(selfLine.serviceShare)}</span>
                       </div>
                     )}
-                    {hasAdjustments && (
-                      <div className="border-t border-emerald-100 my-2" />
-                    )}
+                    {hasAdjustments && <div className="border-t border-emerald-100 my-2" />}
                     <div className="flex justify-between items-center pt-1">
                       <span className="text-[13px] font-black text-slate-800">Total Bayarmu</span>
                       <span className="text-xl font-black text-emerald-600 tracking-tight">{idr.format(selfLine.total)}</span>
@@ -780,12 +880,30 @@ export function ScanFlow() {
 
             {/* Actions */}
             <div className="space-y-3">
-              <input
-                value={transferNote}
-                onChange={(e) => setTransferNote(e.target.value)}
-                placeholder="Catatan rekening/transfer (opsional)"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white px-4 py-3 text-[13px] font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-colors"
-              />
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-black uppercase tracking-wider text-slate-400 font-mono px-1">
+                  Catatan Transfer (disalin bersama tagihan)
+                </label>
+                <div className="relative">
+                  <input
+                    value={transferNote}
+                    onChange={(e) => setTransferNote(e.target.value)}
+                    placeholder="Contoh: Transfer ke BCA 1234567 a/n Budi"
+                    maxLength={120}
+                    className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 pr-10 text-[13px] font-semibold text-slate-800 placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all hover:border-slate-300"
+                  />
+                  {/* Edit icon hint */}
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400 font-medium px-1">
+                  Teks ini akan ikut tersalin saat kamu klik "Salin Tagihan".
+                </p>
+              </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <button

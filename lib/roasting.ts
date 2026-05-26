@@ -9,9 +9,9 @@
  * 1. DB cache (kolom latestRoast di MonthlyBudget):
  *    - Roast disimpan ke DB setelah berhasil di-generate.
  *    - latestRoast di-null-kan HANYA saat ada expense baru/dihapus
- *      (expense-actions.ts & chat-actions.ts) atau saat roastLevel berubah.
+ *      (expense-actions.ts & chat-actions.ts) atau saat roastLevel/persona berubah.
  *    - Membuka/menutup halaman tanpa perubahan expense → selalu pakai cache DB.
- *    - AI HANYA dipanggil ulang jika pengeluaran/level berubah.
+ *    - AI HANYA dipanggil ulang jika pengeluaran/level/persona berubah.
  *
  * 2. React.cache() (per-request memoization):
  *    - Dalam 1 render request, DB hanya di-query sekali meski fungsi dipanggil
@@ -23,6 +23,7 @@ import { prisma } from "@/lib/prisma";
 import { generateContentWithFallback } from "@/lib/ai-fallback";
 
 export type RoastLevel = "MILD" | "MEDIUM" | "NUCLEAR";
+export type RoastPersona = "DEFAULT" | "MAMA" | "SULTAN" | "TETANGGA" | "DOSEN";
 
 async function buildExpenseSummary(userId: string, monthKey: string): Promise<string> {
   const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
@@ -54,34 +55,110 @@ async function buildExpenseSummary(userId: string, monthKey: string): Promise<st
   );
 }
 
-export function buildRoastPrompt(summary: string, level: RoastLevel): string {
+/* ─── Persona definitions ─── */
+
+interface PersonaDescriptor {
+  /** Nama tampilan untuk UI */
+  label: string;
+  emoji: string;
+  /** Karakter persona yang akan disisipkan ke dalam prompt */
+  character: string;
+  /** Contoh kalimat untuk priming gaya bicara */
+  examples: string[];
+}
+
+export const ROAST_PERSONAS: Record<RoastPersona, PersonaDescriptor> = {
+  DEFAULT: {
+    label: "Default",
+    emoji: "✨",
+    character: "asisten keuangan personal yang sarkastik dan gaul tongkrongan Indonesia",
+    examples: [
+      "Bro, kopi 50rb tiap hari? Lo aplikasi keuangan apa ATM Starbucks?",
+    ],
+  },
+  MAMA: {
+    label: "Mama",
+    emoji: "🧕",
+    character:
+      "ibu rumah tangga Indonesia yang protektif tapi sedikit nyinyir; selalu membandingkan pengeluaran user dengan harga bahan dapur, sering memanggil 'nak', dan suka kasih nostalgia 'mama dulu zaman muda...'",
+    examples: [
+      "Aduh nak, kopi 50 ribu? Mama bisa masak rendang seminggu lho segitu...",
+      "Boba lagi boba lagi, mama dulu jajan es teh seribu rupiah aja udah seneng...",
+    ],
+  },
+  SULTAN: {
+    label: "Sultan",
+    emoji: "💸",
+    character:
+      "konglomerat sok kaya yang menganggap pengeluaran user terlalu receh dan gak level; sering pakai istilah 'pegawai aku', 'family office', 'private jet', 'investasi receh segini'",
+    examples: [
+      "Receh banget pengeluaranmu, pegawai aku jajan lebih dari ini.",
+      "200 ribu sebulan? Itu tip valet aku doang, bro.",
+    ],
+  },
+  TETANGGA: {
+    label: "Tetangga Julid",
+    emoji: "🏘️",
+    character:
+      "tetangga ibu-ibu kompleks yang julid dan selalu update gosip; selalu membandingkan pengeluaran user dengan tetangga lain, mengaitkan dengan rumor terbaru, dan kepo banget",
+    examples: [
+      "Eh denger-denger Spotify-nya udah 6 bulan ya, tapi kemarin minta makan ke gua lho...",
+      "Ibu Sari sebelah aja gak sebanyak ini jajannya, hus!",
+    ],
+  },
+  DOSEN: {
+    label: "Dosen Killer",
+    emoji: "👨‍🏫",
+    character:
+      "dosen killer galak yang selalu mengaitkan pengeluaran dengan tugas akhir / IPK yang belum kelar; nada menghakimi seperti sedang sidang skripsi",
+    examples: [
+      "Tugas akhir aja belum kelar, udah ngabisin 800 ribu di Tokopedia? Sidang dulu baru jajan.",
+      "Kamu yakin mau lulus tahun ini dengan track record belanja seperti ini?",
+    ],
+  },
+};
+
+export function buildRoastPrompt(
+  summary: string,
+  level: RoastLevel,
+  persona: RoastPersona = "DEFAULT",
+): string {
   const baseData = `Data keuangan user:\n${summary}`;
+  const personaInfo = ROAST_PERSONAS[persona];
+
+  const personaIntro =
+    persona === "DEFAULT"
+      ? ""
+      : `\n\nKamu memerankan karakter "${personaInfo.label}": ${personaInfo.character}.\n` +
+        `Gaya bicara harus konsisten dengan karakter tersebut. Contoh tone:\n` +
+        personaInfo.examples.map((e) => `- "${e}"`).join("\n") +
+        `\n\nTetap dalam karakter ini dari awal sampai akhir.`;
 
   switch (level) {
     case "MILD":
-      return `Kamu adalah konsultan keuangan yang ramah, sopan, dan suportif.
+      return `Kamu adalah ${persona === "DEFAULT" ? "konsultan keuangan yang ramah, sopan, dan suportif" : personaInfo.character}.${personaIntro}
 Berikan evaluasi pengeluaran user bulan ini dengan nada yang membangun — maksimal 2 kalimat pendek.
-Gunakan bahasa Indonesia yang hangat, tidak menyinggung, dan tetap informatif.
-Tambahkan 1 emoji positif yang relevan di akhir.
+Gunakan bahasa Indonesia yang hangat dan tetap informatif, tapi tetap dalam karakter persona.
+Tambahkan 1 emoji yang relevan di akhir.
 
 ${baseData}
 
 Hanya kembalikan teks evaluasinya saja. Jangan pakai tanda kutip.`;
 
     case "MEDIUM":
-      return `Kamu adalah asisten keuangan personal yang sarkastik dan gaul tongkrongan Indonesia.
+      return `Kamu adalah ${personaInfo.character}.${personaIntro}
 Roasting pengeluaran user bulan ini dengan SINGKAT — maksimal 2 kalimat pendek, langsung nusuk, tidak bertele-tele.
-Gunakan bahasa gaul Indonesia yang sarkastik tapi masih lucu dan tidak kasar.
+Gunakan bahasa Indonesia yang sarkastik tapi masih lucu dan konsisten dengan karakter persona di atas.
 
 ${baseData}
 
 Hanya kembalikan teks isi roasting-nya saja. Jangan pakai tanda kutip.`;
 
     case "NUCLEAR":
-      return `Kamu adalah "Hakim Keuangan" yang tidak punya empati sama sekali dan jujur brutal.
-Roasting pengeluaran user ini dengan level MAKSIMAL — blak-blakan, pedas, tidak ada basa-basi, tidak ada kata penyemangat.
-Gunakan bahasa gaul Indonesia yang keras, cerdas, dan menohok. Maksimal 2-3 kalimat yang bikin malu.
-Jangan kasih saran baik-baik — cukup sampaikan kenyataan pahitnya saja dengan cara yang epic.
+      return `Kamu adalah ${personaInfo.character}, dalam mode paling savage dan tanpa empati sama sekali.${personaIntro}
+Roasting pengeluaran user dengan level MAKSIMAL — blak-blakan, pedas, tidak ada basa-basi, tidak ada kata penyemangat.
+Gunakan bahasa Indonesia yang keras, cerdas, menohok, tapi tetap dalam karakter persona di atas.
+Maksimal 2-3 kalimat yang bikin malu. Jangan kasih saran baik-baik — cukup sampaikan kenyataan pahitnya saja dengan cara yang epic.
 
 ${baseData}
 
@@ -98,22 +175,29 @@ Hanya kembalikan teks isi roasting-nya saja. Jangan pakai tanda kutip.`;
  * Dibungkus React.cache() supaya per-request hanya 1x eksekusi.
  */
 export const getMonthlyRoasting = cache(
-  async (userId: string, monthKey: string): Promise<{ text: string; level: RoastLevel }> => {
+  async (
+    userId: string,
+    monthKey: string,
+  ): Promise<{ text: string; level: RoastLevel; persona: RoastPersona }> => {
     // ── Layer 1: cek DB cache ──
     let currentLevel: RoastLevel = "MEDIUM";
+    let currentPersona: RoastPersona = "DEFAULT";
     try {
       const budget = await prisma.monthlyBudget.findUnique({
         where: { userId_month: { userId, month: monthKey } },
-        select: { latestRoast: true, roastLevel: true },
+        select: { latestRoast: true, roastLevel: true, roastPersona: true },
       });
 
       if (budget?.roastLevel) {
         currentLevel = budget.roastLevel as RoastLevel;
       }
+      if (budget?.roastPersona) {
+        currentPersona = budget.roastPersona as RoastPersona;
+      }
 
       if (budget?.latestRoast) {
         // Cache hit → return langsung tanpa panggil AI sama sekali
-        return { text: budget.latestRoast, level: currentLevel };
+        return { text: budget.latestRoast, level: currentLevel, persona: currentPersona };
       }
     } catch {
       // Gagal baca DB → lanjut ke generate
@@ -125,6 +209,7 @@ export const getMonthlyRoasting = cache(
       return {
         text: "Bentar, aku belum bisa mikir karena API key-nya belum dipasang. Kalau udah ada, ntar aku roasting kelakuan belanjamu bulan ini! 😎",
         level: currentLevel,
+        persona: currentPersona,
       };
     }
 
@@ -135,7 +220,7 @@ export const getMonthlyRoasting = cache(
       summary = "Gagal mengambil data pengeluaran.";
     }
 
-    const prompt = buildRoastPrompt(summary, currentLevel);
+    const prompt = buildRoastPrompt(summary, currentLevel, currentPersona);
 
     try {
       const res = await generateContentWithFallback({
@@ -155,12 +240,13 @@ export const getMonthlyRoasting = cache(
         // Gagal tulis cache → tidak masalah, roast tetap ditampilkan
       }
 
-      return { text: roast, level: currentLevel };
+      return { text: roast, level: currentLevel, persona: currentPersona };
     } catch {
       return {
         text: "Waduh, AI-nya lagi nge-blank karena bon kamu kebanyakan. Coba lagi bentar ya!",
         level: currentLevel,
+        persona: currentPersona,
       };
     }
-  }
+  },
 );

@@ -1,8 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { SetBudgetForm } from "@/components/set-budget-form";
 import { RoastLevelSelector } from "@/components/roast-level-selector";
+import { RoastPersonaSelector } from "@/components/roast-persona-selector";
 import { requireCurrentUserId } from "@/lib/auth";
-import type { RoastLevel } from "@/lib/roasting";
+import type { RoastLevel, RoastPersona } from "@/lib/roasting";
 import { createClient } from "@/utils/supabase/server";
 import { getProfileMetadata, getSignedAvatarUrl } from "@/lib/profile";
 import { ProfileSettingsForm } from "@/components/profile-settings-form";
@@ -29,12 +30,13 @@ export default async function SettingsPage() {
 
   const budget = await prisma.monthlyBudget.findUnique({
     where: { userId_month: { userId, month: monthKey } },
-    select: { limitAmount: true, roastLevel: true },
+    select: { limitAmount: true, roastLevel: true, roastPersona: true },
   });
 
   const categories = await getUserCategories();
 
   const currentRoastLevel: RoastLevel = (budget?.roastLevel as RoastLevel) ?? "MEDIUM";
+  const currentRoastPersona: RoastPersona = (budget?.roastPersona as RoastPersona) ?? "DEFAULT";
 
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-8 pb-32 md:pb-16 flex flex-col gap-8 flex-1 min-h-0 overflow-y-auto hide-scrollbar animate-fade-in-up">
@@ -70,6 +72,11 @@ export default async function SettingsPage() {
         <div className="w-full flex flex-col animate-fade-in-up" style={{ animationDelay: "150ms" }}>
           <RoastLevelSelector currentLevel={currentRoastLevel} />
         </div>
+      </div>
+
+      {/* Persona Selector — full-width on its own row, banyak konten */}
+      <div className="w-full animate-fade-in-up" style={{ animationDelay: "200ms" }}>
+        <RoastPersonaSelector currentPersona={currentRoastPersona} />
       </div>
 
       {/* Custom Categories Manager */}

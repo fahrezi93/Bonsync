@@ -28,14 +28,23 @@ enum RoastLevel {
   NUCLEAR
 }
 
+enum RoastPersona {
+  DEFAULT
+  MAMA
+  SULTAN
+  TETANGGA
+  DOSEN
+}
+
 model MonthlyBudget {
-  id          String   @id @default(uuid())
-  userId      String   @default("legacy")
-  limitAmount Float
-  month       String
-  latestRoast String?
-  roastLevel  RoastLevel @default(MEDIUM)
-  createdAt   DateTime @default(now())
+  id           String       @id @default(uuid())
+  userId       String       @default("legacy")
+  limitAmount  Float
+  month        String
+  latestRoast  String?
+  roastLevel   RoastLevel   @default(MEDIUM)
+  roastPersona RoastPersona @default(DEFAULT)
+  createdAt    DateTime     @default(now())
 
   @@unique([userId, month])
   @@index([userId])

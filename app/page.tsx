@@ -6,6 +6,8 @@ import { RoastingCard } from "@/components/roasting-card";
 import { ManualExpenseForm } from "@/components/manual-expense-form";
 import { getMonthlyRoasting } from "@/lib/roasting";
 import { getCurrentUserId } from "@/lib/auth";
+import { getProfileMetadata } from "@/lib/profile";
+import { createClient } from "@/utils/supabase/server";
 import { LandingPage } from "@/components/landing/landing-page";
 import { Suspense } from "react";
 import Link from "next/link";
@@ -28,6 +30,15 @@ async function getDashboard() {
     return { showLanding: true };
   }
 
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const profile = getProfileMetadata({
+    email: user?.email,
+    user_metadata: user?.user_metadata,
+  });
+
   const monthKey = monthFormatter.format(new Date());
   const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 
@@ -40,7 +51,13 @@ async function getDashboard() {
   ]);
 
   if (!budget) {
-    return { needsBudget: true, monthKey, monthLabel: monthLabelFormatter.format(new Date()), userId };
+    return {
+      needsBudget: true,
+      monthKey,
+      monthLabel: monthLabelFormatter.format(new Date()),
+      userId,
+      displayName: profile.displayName,
+    };
   }
 
   const budgetLimit = budget.limitAmount;
@@ -74,6 +91,7 @@ async function getDashboard() {
     userId,
     monthKey,
     roastText, // null jika perlu di-generate, string jika sudah ada
+    displayName: profile.displayName,
   };
 }
 
@@ -104,9 +122,36 @@ function getCategoryStyle(cat: string) {
   };
 }
 
-async function MonthlyRoastingSection({ userId, monthKey }: { userId: string; monthKey: string }) {
+async function MonthlyRoastingSection({
+  userId,
+  monthKey,
+  survivalScore,
+  remaining,
+  budgetLimit,
+  monthLabel,
+  displayName,
+}: {
+  userId: string;
+  monthKey: string;
+  survivalScore: number;
+  remaining: number;
+  budgetLimit: number;
+  monthLabel: string;
+  displayName?: string;
+}) {
   const roasting = await getMonthlyRoasting(userId, monthKey);
-  return <RoastingCard advice={roasting.text} level={roasting.level} />;
+  return (
+    <RoastingCard
+      advice={roasting.text}
+      level={roasting.level}
+      persona={roasting.persona}
+      survivalScore={survivalScore}
+      remaining={remaining}
+      budgetLimit={budgetLimit}
+      monthLabel={monthLabel}
+      displayName={displayName}
+    />
+  );
 }
 
 export default async function HomePage() {
@@ -237,7 +282,15 @@ export default async function HomePage() {
             </div>
           }>
             <div className="animate-fade-in-up">
-              <MonthlyRoastingSection userId={data.userId!} monthKey={data.monthKey!} />
+              <MonthlyRoastingSection
+                userId={data.userId!}
+                monthKey={data.monthKey!}
+                survivalScore={score}
+                remaining={data.remaining!}
+                budgetLimit={data.budgetLimit!}
+                monthLabel={data.monthLabel!}
+                displayName={data.displayName}
+              />
             </div>
           </Suspense>
 

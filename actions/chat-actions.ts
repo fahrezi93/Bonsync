@@ -257,11 +257,11 @@ export async function generateMonthlyRoasting(): Promise<string> {
 
   // Cek cache DB dulu — hanya generate ulang jika latestRoast null
   // (latestRoast di-null-kan saat ada expense baru/dihapus)
-  let cachedBudget: { latestRoast: string | null; roastLevel: string } | null = null;
+  let cachedBudget: { latestRoast: string | null; roastLevel: string; roastPersona: string } | null = null;
   try {
     cachedBudget = await prisma.monthlyBudget.findUnique({
       where: { userId_month: { userId, month: monthKey } },
-      select: { latestRoast: true, roastLevel: true },
+      select: { latestRoast: true, roastLevel: true, roastPersona: true },
     });
     if (cachedBudget?.latestRoast) {
       return cachedBudget.latestRoast;
@@ -277,7 +277,11 @@ export async function generateMonthlyRoasting(): Promise<string> {
     return "Bentar, aku belum bisa mikir karena API key-nya belum dipasang. Kalau udah ada, ntar aku roasting kelakuan belanjamu bulan ini! 😎";
   }
 
-  const prompt = buildRoastPrompt(summary, (cachedBudget?.roastLevel as "MILD" | "MEDIUM" | "NUCLEAR") ?? "MEDIUM");
+  const prompt = buildRoastPrompt(
+    summary,
+    (cachedBudget?.roastLevel as "MILD" | "MEDIUM" | "NUCLEAR") ?? "MEDIUM",
+    (cachedBudget?.roastPersona as "DEFAULT" | "MAMA" | "SULTAN" | "TETANGGA" | "DOSEN") ?? "DEFAULT",
+  );
 
   try {
     const reply = await callGemini(prompt);
