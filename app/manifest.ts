@@ -13,13 +13,13 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: "#10b981",
     icons: [
       {
-        src: "/api/icon/192",
+        src: "/Bonsyncicon.png",
         sizes: "192x192",
         type: "image/png",
         purpose: "maskable",
       },
       {
-        src: "/api/icon/512",
+        src: "/Bonsyncicon.png",
         sizes: "512x512",
         type: "image/png",
         purpose: "any",

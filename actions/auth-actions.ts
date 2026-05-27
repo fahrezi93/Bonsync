@@ -21,6 +21,18 @@ function normalizeSiteUrl(url: string) {
 }
 
 async function getSiteUrl() {
+  // NEXT_PUBLIC_SITE_URL selalu diprioritaskan — ini yang kita set secara eksplisit
+  // di .env.production.deploy dan Cloud Run env vars. Jangan pakai x-forwarded-host
+  // karena di Cloud Run bisa berisi internal container address (0.0.0.0:8080).
+  if (process.env.NEXT_PUBLIC_SITE_URL) {
+    return normalizeSiteUrl(process.env.NEXT_PUBLIC_SITE_URL);
+  }
+
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+
+  // Dev fallback: pakai header hanya kalau env var tidak ada
   const headerStore = await headers();
   const forwardedHost = headerStore.get("x-forwarded-host");
   const forwardedProto = headerStore.get("x-forwarded-proto");
@@ -30,12 +42,6 @@ async function getSiteUrl() {
     return `${forwardedProto ?? "http"}://${host}`;
   }
 
-  if (process.env.NEXT_PUBLIC_SITE_URL) {
-    return normalizeSiteUrl(process.env.NEXT_PUBLIC_SITE_URL);
-  }
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
-  }
   return "http://localhost:3000";
 }
 

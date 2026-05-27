@@ -68,15 +68,15 @@ export function Footer() {
               Hukum & Hubungan
             </h5>
             <div className="flex flex-col gap-2.5">
-              <Link href="#" className="text-[12.5px] font-medium text-slate-500 hover:text-emerald-600 transition-colors tracking-tight">
+              <Link href="/privacy" className="text-[12.5px] font-medium text-slate-500 hover:text-emerald-600 transition-colors tracking-tight">
                 Privacy Policy
               </Link>
-              <Link href="#" className="text-[12.5px] font-medium text-slate-500 hover:text-emerald-600 transition-colors tracking-tight">
+              <Link href="/terms" className="text-[12.5px] font-medium text-slate-500 hover:text-emerald-600 transition-colors tracking-tight">
                 Terms of Service
               </Link>
-              <Link href="#" className="text-[12.5px] font-medium text-slate-500 hover:text-emerald-600 transition-colors tracking-tight">
+              <a href="mailto:support@bonsync.com" className="text-[12.5px] font-medium text-slate-500 hover:text-emerald-600 transition-colors tracking-tight">
                 Hubungi Kami
-              </Link>
+              </a>
             </div>
           </div>
 

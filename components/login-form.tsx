@@ -1,19 +1,31 @@
 "use client";
 
-import { useActionState, useState, useEffect } from "react";
-import { Loader2, Mail, Lock, Eye, EyeOff, CheckCircle, RefreshCw, Sparkle } from "lucide-react";
+import { useActionState, useState, useEffect, useTransition, useRef } from "react";
+import { Loader2, Mail, Lock, Eye, EyeOff, CheckCircle, RefreshCw } from "lucide-react";
 import {
   signIn,
   signUp,
   resendConfirmationEmail,
   type AuthActionState,
 } from "@/actions/auth-actions";
+import { createClient } from "@/utils/supabase/client";
 
 const initialState: AuthActionState = {};
 
 interface LoginFormProps {
   next: string;
   defaultEmail?: string;
+}
+
+/** Ambil site URL yang benar — prioritaskan env var, fallback ke window.location.origin */
+function getSiteUrl(): string {
+  if (process.env.NEXT_PUBLIC_SITE_URL) {
+    return process.env.NEXT_PUBLIC_SITE_URL.replace(/\/+$/, "");
+  }
+  if (typeof window !== "undefined") {
+    return window.location.origin;
+  }
+  return "http://localhost:3000";
 }
 
 export function LoginForm({ next, defaultEmail }: LoginFormProps) {
@@ -23,6 +35,15 @@ export function LoginForm({ next, defaultEmail }: LoginFormProps) {
   const [email, setEmail] = useState(defaultEmail || "");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [googlePending, startGoogleTransition] = useTransition();
+  const [googleError, setGoogleError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+  const googleInitRef = useRef(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
 
   const [loginState, loginAction, loginPending] = useActionState(
     signIn,
@@ -53,6 +74,86 @@ export function LoginForm({ next, defaultEmail }: LoginFormProps) {
   const showResendButton =
     mode === "login" &&
     loginState.error?.toLowerCase().includes("belum dikonfirmasi");
+
+  // Load Google Identity Services SDK dan render tombol langsung ke container
+  useEffect(() => {
+    if (googleInitRef.current) return;
+
+    const initGoogleSignIn = () => {
+      if (googleInitRef.current) return;
+
+      const google = (window as any).google;
+      if (!google) return;
+
+      googleInitRef.current = true;
+      const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "";
+      if (!clientId) {
+        console.error("BonSync: NEXT_PUBLIC_GOOGLE_CLIENT_ID tidak ditemukan di .env");
+        return;
+      }
+
+      try {
+        google.accounts.id.initialize({
+          client_id: clientId,
+          ux_mode: "popup",
+          callback: async (response: any) => {
+            setGoogleError(null);
+            startGoogleTransition(async () => {
+              try {
+                const supabase = createClient();
+                const { error } = await supabase.auth.signInWithIdToken({
+                  provider: "google",
+                  token: response.credential,
+                });
+                if (error) {
+                  setGoogleError(error.message);
+                } else {
+                  window.location.href = next || "/";
+                }
+              } catch (e) {
+                setGoogleError(
+                  e instanceof Error ? e.message : "Gagal masuk dengan Google."
+                );
+              }
+            });
+          },
+        });
+
+        // Render tombol Google langsung ke dalam container
+        const container = document.getElementById("google-signin-container");
+        if (container) {
+          container.innerHTML = ""; // bersihkan dulu
+          google.accounts.id.renderButton(container, {
+            theme: "outline",
+            size: "large",
+            shape: "pill",
+            width: container.offsetWidth || 360,
+            text: "continue_with",
+            locale: "id",
+          });
+        }
+      } catch (err) {
+        console.error("Gagal menginisialisasi Google Sign-In:", err);
+      }
+    };
+
+    if (typeof window === "undefined") return;
+
+    const existingScript = document.querySelector(
+      'script[src="https://accounts.google.com/gsi/client?hl=id"]'
+    );
+    if (!existingScript) {
+      const script = document.createElement("script");
+      script.src = "https://accounts.google.com/gsi/client?hl=id";
+      script.async = true;
+      script.defer = true;
+      script.onload = initGoogleSignIn;
+      document.head.appendChild(script);
+    } else if ((window as any).google) {
+      initGoogleSignIn();
+    }
+  }, [next]);
+
 
   return (
     <div className="bg-white/80 backdrop-blur-xl border border-slate-200/60 rounded-[32px] p-8 shadow-[0_20px_50px_rgba(0,0,0,0.02)] space-y-6 relative overflow-hidden">
@@ -255,6 +356,37 @@ export function LoginForm({ next, defaultEmail }: LoginFormProps) {
                   : "Buat Akun"}
             </button>
           </form>
+
+          {/* Divider */}
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-px bg-slate-200" />
+            <span className="text-xs font-semibold text-slate-400">atau</span>
+            <div className="flex-1 h-px bg-slate-200" />
+          </div>
+
+          {/* Google Sign-In button — rendered langsung oleh GSI SDK */}
+          {googlePending ? (
+            <button
+              type="button"
+              disabled
+              className="w-full flex items-center justify-center gap-3 rounded-full border border-slate-200 bg-white py-3.5 text-sm font-semibold text-slate-700 shadow-sm"
+            >
+              <Loader2 className="h-4 w-4 animate-spin text-emerald-500" />
+              Menghubungkan ke Google...
+            </button>
+          ) : (
+            <div
+              id="google-signin-container"
+              className="w-full flex justify-center [&>div]:!w-full [&_iframe]:!w-full [&_iframe]:!max-w-none"
+            />
+          )}
+
+          {/* Google error */}
+          {googleError && (
+            <div className="rounded-2xl border border-rose-200 bg-rose-50/90 px-4 py-3 text-xs font-bold text-rose-700 animate-fade-in-up">
+              {googleError}
+            </div>
+          )}
 
           {/* Tombol kirim ulang email konfirmasi */}
           {showResendButton && !showResend && (

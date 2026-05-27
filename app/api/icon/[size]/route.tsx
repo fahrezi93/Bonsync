@@ -1,42 +1,29 @@
-import { ImageResponse } from "next/og";
-import { type NextRequest } from "next/server";
-
-export const runtime = "edge";
+import { type NextRequest, NextResponse } from "next/server";
+import { readFile } from "fs/promises";
+import path from "path";
 
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ size: string }> },
 ) {
   const { size: sizeParam } = await params;
-  const size = sizeParam === "512" ? 512 : 192;
-  const radius = size === 512 ? 100 : 40;
-  const fontSize = size === 512 ? 256 : 96;
+  const validSizes = ["192", "512"];
+  const size = validSizes.includes(sizeParam) ? sizeParam : "192";
 
-  return new ImageResponse(
-    (
-      <div
-        style={{
-          width: "100%",
-          height: "100%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-          borderRadius: `${radius}px`,
-        }}
-      >
-        <div
-          style={{
-            fontSize,
-            fontWeight: 900,
-            color: "white",
-            fontFamily: "sans-serif",
-          }}
-        >
-          B
-        </div>
-      </div>
-    ),
-    { width: size, height: size },
-  );
+  try {
+    const iconPath = path.join(process.cwd(), "public", "Bonsyncicon.png");
+    const fileBuffer = await readFile(iconPath);
+
+    return new NextResponse(fileBuffer, {
+      status: 200,
+      headers: {
+        "Content-Type": "image/png",
+        "Cache-Control": "public, max-age=86400, immutable",
+        "Content-Length": fileBuffer.byteLength.toString(),
+      },
+    });
+  } catch {
+    // Fallback: return a simple colored square if file not found
+    return new NextResponse(null, { status: 404 });
+  }
 }

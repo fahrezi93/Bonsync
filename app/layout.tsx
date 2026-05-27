@@ -17,6 +17,15 @@ export const metadata: Metadata = {
   description:
     "Catat pengeluaran, split bill, dan dapatkan roasting dari AI tentang kebiasaan belanjamu.",
   keywords: ["expense tracker", "split bill", "AI", "keuangan", "BonSync"],
+  icons: {
+    icon: [
+      { url: "/Bonsyncicon.png", type: "image/png" },
+    ],
+    apple: [
+      { url: "/Bonsyncicon.png", type: "image/png" },
+    ],
+    shortcut: "/Bonsyncicon.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -45,6 +54,7 @@ export default async function RootLayout({
       lang="id"
       className={`${inter.variable}`}
       suppressHydrationWarning
+      data-scroll-behavior="smooth"
     >
       <body
         className="antialiased font-sans bg-slate-50 text-slate-900 selection:bg-emerald-500 selection:text-white"
