@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { getCategoryStyle } from "@/lib/categories";
 import { SurvivalScore } from "@/components/survival-score";
 import { CategoryPieChart } from "@/components/category-pie-chart";
 import { RoastingCard } from "@/components/roasting-card";
@@ -42,11 +43,15 @@ async function getDashboard() {
   const monthKey = monthFormatter.format(new Date());
   const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 
-  const [budget, expenses] = await Promise.all([
+  const [budget, expenses, customCategories] = await Promise.all([
     prisma.monthlyBudget.findUnique({ where: { userId_month: { userId, month: monthKey } } }),
     prisma.expense.findMany({
       where: { userId, date: { gte: monthStart } },
       orderBy: { date: "desc" },
+    }),
+    prisma.category.findMany({
+      where: { userId },
+      orderBy: { createdAt: "asc" },
     }),
   ]);
 
@@ -92,35 +97,11 @@ async function getDashboard() {
     monthKey,
     roastText, // null jika perlu di-generate, string jika sudah ada
     displayName: profile.displayName,
+    customCategories,
   };
 }
 
 
-function getCategoryStyle(cat: string) {
-  const norm = cat.toLowerCase();
-  if (norm.includes("makan") || norm.includes("food")) {
-    return {
-      icon: <Utensils className="h-4.5 w-4.5" />,
-      colorClass: "bg-emerald-50 text-emerald-600 border border-emerald-100/50"
-    };
-  }
-  if (norm.includes("transport") || norm.includes("bensin") || norm.includes("parkir") || norm.includes("ojek")) {
-    return {
-      icon: <Car className="h-4.5 w-4.5" />,
-      colorClass: "bg-slate-50 text-slate-500 border border-slate-100/60"
-    };
-  }
-  if (norm.includes("belanja") || norm.includes("shopping") || norm.includes("lifestyle")) {
-    return {
-      icon: <ShoppingBag className="h-4.5 w-4.5" />,
-      colorClass: "bg-emerald-50/70 text-emerald-700 border border-emerald-100/30"
-    };
-  }
-  return {
-    icon: <Receipt className="h-4.5 w-4.5" />,
-    colorClass: "bg-slate-50 text-slate-500 border border-slate-100/30"
-  };
-}
 
 async function MonthlyRoastingSection({
   userId,
@@ -325,7 +306,8 @@ export default async function HomePage() {
                 
                 <div className="flex-1 overflow-y-auto custom-scrollbar px-2 py-2 flex flex-col gap-1 pb-4">
                   {data.recentExpenses.map((exp) => {
-                    const { icon, colorClass } = getCategoryStyle(exp.category);
+                    const catStyle = getCategoryStyle(exp.category, data.customCategories);
+                    const Icon = catStyle.Icon;
                     return (
                       <Link
                         key={exp.id}
@@ -333,12 +315,12 @@ export default async function HomePage() {
                         className="flex justify-between items-center px-4 py-3 rounded-2xl hover:bg-slate-50 active:bg-slate-100/50 transition-colors group"
                       >
                         <div className="flex items-center gap-4 min-w-0 flex-1">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${colorClass}`}>
-                            {icon}
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${catStyle.color}`}>
+                            <Icon className="w-4.5 h-4.5" />
                           </div>
                           <div className="flex flex-col min-w-0 flex-1 gap-1">
-                            <p className="text-sm font-bold text-slate-800 leading-none capitalize truncate">
-                              {exp.category.toLowerCase()}
+                            <p className="text-sm font-bold text-slate-800 leading-none truncate">
+                              {catStyle.label}
                             </p>
                             <p className="text-xs font-medium text-slate-500 flex items-center gap-2">
                               <span className="whitespace-nowrap">{new Intl.DateTimeFormat('id-ID', { dateStyle: 'short' }).format(exp.date)}</span>

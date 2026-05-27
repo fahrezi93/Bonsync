@@ -15,9 +15,9 @@ const getGeminiKeys = () => {
 
 // Model text-out yang tersedia. Urutan dari yang paling ringan ke yang lebih berat.
 const DEFAULT_GEMINI_MODELS = [
-  "gemini-2.0-flash-lite",
-  "gemini-2.0-flash",
-  "gemini-2.5-flash-lite-preview-06-17",
+  "gemini-3.1-flash-lite", // Prioritas utama karena limitnya tinggi (500 RPD)
+  "gemini-3.1-flash",
+  "gemini-2.5-flash-lite",
   "gemini-2.5-flash",
   "gemini-1.5-flash",
   "gemini-1.5-flash-8b",

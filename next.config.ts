@@ -8,7 +8,7 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["@prisma/client", "prisma", "pg", "@prisma/adapter-pg"],
   // allowedDevOrigins only needed for local LAN dev
   ...(process.env.NODE_ENV !== "production" && {
-    allowedDevOrigins: ["192.168.110.41"],
+    allowedDevOrigins: ["192.168.110.41", "192.168.100.6"],
   }),
   experimental: {
     serverActions: {

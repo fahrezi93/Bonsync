@@ -62,6 +62,7 @@ const intentSchema = {
 export async function processChatMessage(
   userText: string,
   expenseSummary: string,
+  history: { role: string; content: string }[] = [],
 ): Promise<ChatActionResult> {
   const apiKey = process.env.GEMINI_API_KEY;
 
@@ -71,6 +72,10 @@ export async function processChatMessage(
         "AI lagi offline (API key belum diset), tapi aku tetap siap dengerin curhatanmu 😅",
     };
   }
+
+  const historyText = history
+    .map((m) => `${m.role === "user" ? "User" : "AI"}: ${m.content}`)
+    .join("\n\n");
 
   const systemPrompt = `
 Kamu adalah asisten keuangan personal yang sarkastik tapi helpful, bahasa gaul Indonesia.
@@ -86,12 +91,15 @@ Kamu punya 3 mode respons:
    - Beri respons sarkastik tapi informatif
    - intent: "roasting"
 
-3. OTHER — pertanyaan umum lain
+3. OTHER — pertanyaan umum lain atau obrolan nyambung dari sebelumnya
    - intent: "other"
-   - Jawab seperlunya
+   - Jawab seperlunya berdasarkan riwayat percakapan.
 
 Data pengeluaran bulan ini:
 ${expenseSummary}
+
+Riwayat Percakapan Sebelumnya:
+${historyText || "Belum ada."}
 
 PENTING:
 - Kalau intent=expense, WAJIB isi field description (nama pengeluaran) dan amount (angka rupiah, tanpa simbol)

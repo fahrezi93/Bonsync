@@ -1,9 +1,106 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Check, Pencil, Plus, Trash2, Tag, Loader2, X } from "lucide-react";
+import { useState, useTransition, useEffect, useRef } from "react";
+import { Check, Pencil, Plus, Trash2, Tag, Loader2, X, ChevronDown } from "lucide-react";
 import { addCategory, deleteCategory, updateCategory } from "@/actions/category-actions";
 import { AVAILABLE_ICONS, AVAILABLE_COLORS, PREDEFINED_CATEGORIES } from "@/lib/categories";
+
+const ICON_OPTIONS = [
+  { value: "Utensils", label: "Makanan 🍽️" },
+  { value: "Coffee", label: "Kopi/Kafe ☕" },
+  { value: "Car", label: "Transportasi 🚗" },
+  { value: "Plane", label: "Liburan/Travel ✈️" },
+  { value: "ShoppingBag", label: "Belanja 🛍️" },
+  { value: "Heart", label: "Kesehatan ❤️" },
+  { value: "skincare", label: "Skincare 🧴" },
+  { value: "Gamepad2", label: "Hiburan 🎮" },
+  { value: "Package", label: "Paket 📦" },
+  { value: "Smartphone", label: "Pulsa/Kuota 📱" },
+  { value: "Tag", label: "Label 🏷️" },
+  { value: "Folder", label: "Folder 📁" },
+  { value: "Gift", label: "Hadiah/Donasi 🎁" },
+  { value: "Wrench", label: "Perbaikan 🛠️" },
+  { value: "CreditCard", label: "Cicilan/Kartu 💳" },
+  { value: "Sparkles", label: "Berkilau ✨" },
+  { value: "Book", label: "Edukasi 📚" },
+  { value: "GraduationCap", label: "Sekolah/Kuliah 🎓" },
+  { value: "Home", label: "Rumah 🏠" },
+  { value: "Zap", label: "Listrik ⚡" },
+  { value: "Scissors", label: "Gunting/Hobi ✂️" },
+  { value: "Droplet", label: "Air/Utilitas 💧" },
+];
+
+const COLOR_OPTIONS = AVAILABLE_COLORS.map((colorClass, i) => ({
+  value: colorClass,
+  label: `Warna ${i + 1}`,
+  colorClass: colorClass
+}));
+
+function CustomDropdown({
+  value,
+  onChange,
+  options,
+  renderOption,
+  renderValue,
+  className = "",
+  placement = "bottom"
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options: any[];
+  renderOption: (opt: any) => React.ReactNode;
+  renderValue: (opt: any) => React.ReactNode;
+  className?: string;
+  placement?: "top" | "bottom";
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const selectedOption = options.find(o => o.value === value) || options[0];
+
+  return (
+    <div className="relative w-full" ref={containerRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={`flex w-full items-center justify-between border border-slate-200 bg-white px-4 text-sm font-medium text-slate-800 shadow-sm transition-all focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/10 ${className}`}
+      >
+        <div className="flex items-center gap-2 truncate">
+          {renderValue(selectedOption)}
+        </div>
+        <ChevronDown className={`ml-2 h-4 w-4 shrink-0 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      {isOpen && (
+        <div className={`absolute z-50 max-h-60 w-full overflow-auto rounded-xl border border-slate-100 bg-white p-1 shadow-lg custom-scrollbar ${placement === "top" ? "bottom-full mb-2" : "mt-2"}`}>
+          {options.map((opt, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => {
+                onChange(opt.value);
+                setIsOpen(false);
+              }}
+              className={`flex w-full items-center rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-slate-50 ${value === opt.value ? 'bg-emerald-50 text-emerald-700 font-semibold' : 'text-slate-700'}`}
+            >
+              {renderOption(opt)}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 type CategoryProps = {
   categories: Array<{ id: string; name: string; icon: string | null; color: string | null }>;
@@ -96,24 +193,36 @@ export function CustomCategoryManager({ categories }: CategoryProps) {
                     onChange={(event) => setEditName(event.target.value)}
                     className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-800 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                   />
-                  <select
-                    value={editIcon}
-                    onChange={(event) => setEditIcon(event.target.value)}
-                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-800 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                  >
-                    {Object.keys(AVAILABLE_ICONS).map((iconName) => (
-                      <option key={iconName} value={iconName}>{iconName}</option>
-                    ))}
-                  </select>
-                  <select
-                    value={editColor}
-                    onChange={(event) => setEditColor(event.target.value)}
-                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-800 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                  >
-                    {AVAILABLE_COLORS.map((colorClassOption, i) => (
-                      <option key={colorClassOption} value={colorClassOption}>Warna {i + 1}</option>
-                    ))}
-                  </select>
+                  <div className="w-full sm:w-40">
+                    <CustomDropdown
+                      value={editIcon}
+                      onChange={setEditIcon}
+                      options={ICON_OPTIONS}
+                      className="py-2 rounded-xl"
+                      renderValue={(opt) => <span>{opt.label}</span>}
+                      renderOption={(opt) => <span>{opt.label}</span>}
+                    />
+                  </div>
+                  <div className="w-full sm:w-40">
+                    <CustomDropdown
+                      value={editColor}
+                      onChange={setEditColor}
+                      options={COLOR_OPTIONS}
+                      className="py-2 rounded-xl"
+                      renderValue={(opt) => (
+                        <div className="flex items-center gap-2">
+                          <div className={`size-4 rounded-full shadow-inner bg-current ${opt.colorClass.split(" ")[1]}`} />
+                          <span>{opt.label}</span>
+                        </div>
+                      )}
+                      renderOption={(opt) => (
+                        <div className="flex items-center gap-2">
+                          <div className={`size-4 rounded-full shadow-inner bg-current ${opt.colorClass.split(" ")[1]}`} />
+                          <span>{opt.label}</span>
+                        </div>
+                      )}
+                    />
+                  </div>
                   <div className="flex gap-2">
                     <button
                       type="button"
@@ -172,7 +281,7 @@ export function CustomCategoryManager({ categories }: CategoryProps) {
 
       <div className="border-t border-slate-100 pt-6">
         <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 pl-1 mb-4">Tambah Kategori Baru</h3>
-        
+
         {errorMsg && (
           <div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm font-medium text-rose-700 animate-fade-in-up">
             ⚠️ {errorMsg}
@@ -190,38 +299,48 @@ export function CustomCategoryManager({ categories }: CategoryProps) {
               className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm font-medium text-slate-800 focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 shadow-sm transition-all"
             />
           </div>
-          
-          <div className="w-full md:w-32 space-y-2">
+
+          <div className="w-full md:w-48 space-y-2">
             <label className="text-[11px] font-bold text-slate-500 ml-1">IKON</label>
-            <select
+            <CustomDropdown
               value={selectedIcon}
-              onChange={(e) => setSelectedIcon(e.target.value)}
-              className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-3.5 text-sm font-medium text-slate-800 focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 shadow-sm transition-all appearance-none"
-            >
-              {Object.keys(AVAILABLE_ICONS).map(iconName => (
-                <option key={iconName} value={iconName}>{iconName}</option>
-              ))}
-            </select>
+              onChange={setSelectedIcon}
+              options={ICON_OPTIONS}
+              className="py-3.5 rounded-2xl"
+              placement="top"
+              renderValue={(opt) => <span>{opt.label}</span>}
+              renderOption={(opt) => <span>{opt.label}</span>}
+            />
           </div>
 
-          <div className="w-full md:w-32 space-y-2">
+          <div className="w-full md:w-40 space-y-2">
             <label className="text-[11px] font-bold text-slate-500 ml-1">WARNA</label>
-            <select
+            <CustomDropdown
               value={selectedColor}
-              onChange={(e) => setSelectedColor(e.target.value)}
-              className={`w-full rounded-2xl border px-3 py-3.5 text-sm font-medium focus:outline-none focus:ring-4 focus:ring-emerald-500/10 shadow-sm transition-all appearance-none ${selectedColor.split(" ")[0]} border-slate-200 bg-white text-slate-800`}
-            >
-              {AVAILABLE_COLORS.map((colorClass, i) => (
-                <option key={i} value={colorClass}>Warna {i + 1}</option>
-              ))}
-            </select>
+              onChange={setSelectedColor}
+              options={COLOR_OPTIONS}
+              className="py-3.5 rounded-2xl"
+              placement="top"
+              renderValue={(opt) => (
+                <div className="flex items-center gap-2">
+                  <div className={`size-4 rounded-full shadow-inner bg-current ${opt.colorClass.split(" ")[1]}`} />
+                  <span>{opt.label}</span>
+                </div>
+              )}
+              renderOption={(opt) => (
+                <div className="flex items-center gap-2">
+                  <div className={`size-4 rounded-full shadow-inner bg-current ${opt.colorClass.split(" ")[1]}`} />
+                  <span>{opt.label}</span>
+                </div>
+              )}
+            />
           </div>
 
           <button
             type="button"
             onClick={handleAdd}
             disabled={isPending || !newCatName.trim()}
-            className="w-full md:w-auto flex h-[46px] items-center justify-center gap-2 rounded-2xl bg-slate-900 px-6 py-3.5 text-sm font-bold text-white hover:bg-slate-800 hover:shadow-md transition-all active:scale-[0.96] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none"
+            className="w-full md:w-auto flex h-[48px] items-center justify-center gap-2 rounded-2xl bg-slate-900 px-6 text-sm font-bold text-white hover:bg-slate-800 hover:shadow-md transition-all active:scale-[0.96] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none"
           >
             {isPending ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
             <span>Tambah Kategori</span>
@@ -231,3 +350,4 @@ export function CustomCategoryManager({ categories }: CategoryProps) {
     </div>
   );
 }
+

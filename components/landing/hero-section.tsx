@@ -508,12 +508,6 @@ export function HeroSection() {
 
                   {/* Control / Tutorial Panel */}
                   <div className="flex-1 flex flex-col items-start text-left w-full max-w-md">
-
-                    <div className="inline-flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-600 text-[10px] font-bold px-3 py-1 rounded-full mb-5 tracking-tight">
-                      <Users className="w-3.5 h-3.5" />
-                      FAIR-SPLIT MATRIX
-                    </div>
-
                     <h4 className="text-xl md:text-[22px] font-bold text-[#21164c] mb-3 tracking-tight font-sans leading-[1.20]">
                       Patungan Tanpa Canggung
                     </h4>
@@ -676,12 +670,6 @@ export function HeroSection() {
 
                   {/* High Fidelity Roast control deck */}
                   <div className="flex-1 flex flex-col items-start text-left w-full max-w-md">
-
-                    <div className="inline-flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-600 text-[10px] font-bold px-3 py-1 rounded-full mb-5 tracking-tight">
-                      <Flame className="w-3.5 h-3.5" />
-                      AI SATIRE ENGINE
-                    </div>
-
                     <h4 className="text-xl md:text-[22px] font-bold text-[#21164c] mb-3 tracking-tight font-sans leading-[1.20]">
                       Teguran Pedas Finansial
                     </h4>

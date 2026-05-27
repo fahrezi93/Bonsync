@@ -17,10 +17,11 @@ export default async function LoginPage({
   const next = String(params.next ?? "/");
   const errorParam = params.error ? String(params.error) : undefined;
   const verifiedParam = params.verified ? String(params.verified) : undefined;
+  const emailParam = params.email ? String(params.email) : undefined;
 
   return (
     <div className="flex min-h-screen w-full flex-col items-center justify-center bg-gradient-to-br from-[#bcf2ff]/30 via-[#dfff9d]/20 to-[#ffaae6]/30 px-4 py-16 relative overflow-hidden">
-      
+
       {/* Floating Ambient Glow Orbs */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
         <div className="absolute -top-[10%] left-[20%] w-[350px] h-[350px] bg-emerald-100/40 rounded-full blur-[100px] animate-pulse duration-[6000ms]" />
@@ -37,7 +38,7 @@ export default async function LoginPage({
       </Link>
 
       <div className="w-full max-w-sm space-y-8 animate-fade-in-up relative z-10">
-        
+
         {/* Brand Re-Branded Emblem & Typography */}
         <div className="text-center space-y-3 select-none">
           <div className="space-y-1">
@@ -45,7 +46,7 @@ export default async function LoginPage({
               Bon<span className="text-emerald-500">Sync</span>
             </h1>
             <p className="text-sm font-medium text-slate-500">
-              Catat pengeluaran • split bill • AI roasting
+              Catat Pengeluaran • Split Bill • AI Roasting
             </p>
           </div>
         </div>
@@ -70,8 +71,8 @@ export default async function LoginPage({
         )}
 
         {/* Premium LoginForm Glass Box */}
-        <LoginForm next={next} />
-        
+        <LoginForm next={next} defaultEmail={emailParam} />
+
       </div>
     </div>
   );

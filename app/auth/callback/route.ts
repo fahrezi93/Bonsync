@@ -88,9 +88,18 @@ export async function GET(request: NextRequest) {
 
   // Handle PKCE flow (email link klik mengandung "code")
   if (code) {
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      return redirectWithCookies(successRedirect, cookiesToSet);
+      if (type === "recovery") {
+        return redirectWithCookies(successRedirect, cookiesToSet);
+      }
+      // Force user to login manually after verifying email
+      await supabase.auth.signOut();
+      const userEmail = data.user?.email || "";
+      const verifyUrl = new URL("/login", origin);
+      verifyUrl.searchParams.set("verified", "1");
+      if (userEmail) verifyUrl.searchParams.set("email", userEmail);
+      return redirectWithCookies(verifyUrl.toString(), cookiesToSet);
     }
 
     if (error.message.toLowerCase().includes("code verifier")) {
@@ -106,12 +115,21 @@ export async function GET(request: NextRequest) {
 
   // Handle OTP/token_hash flow (alternatif Supabase email flow)
   if (token_hash && type) {
-    const { error } = await supabase.auth.verifyOtp({
+    const { data, error } = await supabase.auth.verifyOtp({
       token_hash,
       type: type as "signup" | "email" | "recovery",
     });
     if (!error) {
-      return redirectWithCookies(successRedirect, cookiesToSet);
+      if (type === "recovery") {
+        return redirectWithCookies(successRedirect, cookiesToSet);
+      }
+      // Force user to login manually after verifying email
+      await supabase.auth.signOut();
+      const userEmail = data.user?.email || "";
+      const verifyUrl = new URL("/login", origin);
+      verifyUrl.searchParams.set("verified", "1");
+      if (userEmail) verifyUrl.searchParams.set("email", userEmail);
+      return redirectWithCookies(verifyUrl.toString(), cookiesToSet);
     }
     console.error("[auth/callback] verifyOtp error:", error.message);
   }

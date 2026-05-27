@@ -13,13 +13,14 @@ const initialState: AuthActionState = {};
 
 interface LoginFormProps {
   next: string;
+  defaultEmail?: string;
 }
 
-export function LoginForm({ next }: LoginFormProps) {
+export function LoginForm({ next, defaultEmail }: LoginFormProps) {
   const [mode, setMode] = useState<"login" | "register">("login");
   const [showPassword, setShowPassword] = useState(false);
   const [showResend, setShowResend] = useState(false);
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(defaultEmail || "");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 

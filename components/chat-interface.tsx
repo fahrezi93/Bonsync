@@ -307,7 +307,11 @@ export function ChatInterface({ expenseSummary }: ChatInterfaceProps) {
 
     // Normal message → proses AI
     startSend(async () => {
-      const result = await processChatMessage(msg, expenseSummary);
+      const historyToPass = messages.slice(-10).map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
+      const result = await processChatMessage(msg, expenseSummary, historyToPass);
       const aiMsg: ChatMessage = {
         id: msgId.current++,
         role: "ai",

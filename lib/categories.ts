@@ -1,4 +1,7 @@
-import { Utensils, Car, ShoppingBag, Heart, Gamepad2, Package, Tag, Folder, Sparkles, Book, Home, Zap } from "lucide-react";
+import {
+  Utensils, Car, ShoppingBag, Heart, Gamepad2, Package, Tag, Folder, Sparkles, Book, Home, Zap,
+  Coffee, Plane, Smartphone, Gift, Wrench, Scissors, CreditCard, GraduationCap, Droplet
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export const PREDEFINED_CATEGORIES = [
@@ -23,6 +26,16 @@ export const AVAILABLE_ICONS: Record<string, LucideIcon> = {
   Book,
   Home,
   Zap,
+  Coffee,
+  Plane,
+  Smartphone,
+  Gift,
+  Wrench,
+  Scissors,
+  CreditCard,
+  GraduationCap,
+  Droplet,
+  skincare: Droplet,
 };
 
 export const AVAILABLE_COLORS = [
@@ -45,7 +58,7 @@ export const AVAILABLE_COLORS = [
   "bg-rose-50 text-rose-600 border-rose-200",
 ];
 
-export function getCategoryStyle(categoryName: string, customCategories?: Array<{name: string, color: string | null, icon: string | null}>) {
+export function getCategoryStyle(categoryName: string, customCategories?: Array<{ name: string, color: string | null, icon: string | null }>) {
   // Check predefined first
   const predefined = PREDEFINED_CATEGORIES.find(c => c.name === categoryName);
   if (predefined) {
