@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Receipt, Tag, Utensils, Car, ShoppingBag, Sparkles, Percent, FileText, Bell, UserCheck } from "lucide-react";
-import { requireCurrentUserId } from "@/lib/auth";
+import { requireOnboarding } from "@/lib/auth";
 import { EditExpenseDialog } from "@/components/edit-expense-dialog";
 import { EditReceiptDialog } from "@/components/edit-receipt-dialog";
 import { getUserCategories } from "@/actions/category-actions";
@@ -101,13 +101,13 @@ async function getReceiptImageSrc(imagePath: string | null | undefined) {
   return data.signedUrl;
 }
 
-export default async function ExpenseDetailPage({
+export default async function HistoryDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const userId = await requireCurrentUserId();
+  const userId = await requireOnboarding();
   const expense = await getExpenseDetail(id, userId);
 
   if (!expense) {

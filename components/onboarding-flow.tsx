@@ -199,15 +199,16 @@ function Stepper({ current }: { current: Step }) {
     { num: 3 as Step, label: "Persona" },
   ];
   return (
-    <div className="flex items-center justify-center gap-2 md:gap-3 mb-2">
+    <div className="flex items-start justify-center w-full max-w-md mx-auto mb-6 px-4 select-none">
       {steps.map((s, idx) => {
         const isDone = current > s.num;
         const isActive = current === s.num;
         return (
-          <div key={s.num} className="flex items-center gap-2 md:gap-3">
-            <div className="flex items-center gap-2">
+          <div key={s.num} className="flex items-center flex-1 last:flex-none">
+            {/* Step Node */}
+            <div className="flex flex-col items-center flex-1">
               <div
-                className={`flex h-8 w-8 items-center justify-center rounded-full border-2 transition-all ${
+                className={`flex h-8 w-8 items-center justify-center rounded-full border-2 transition-all duration-300 shrink-0 ${
                   isDone
                     ? "bg-emerald-500 border-emerald-500 text-white"
                     : isActive
@@ -222,17 +223,22 @@ function Stepper({ current }: { current: Step }) {
                 )}
               </div>
               <span
-                className={`hidden sm:inline text-xs font-bold ${
+                className={`text-[10px] sm:text-xs font-bold mt-2 transition-colors duration-300 text-center font-sora ${
                   isActive ? "text-slate-800" : isDone ? "text-emerald-700" : "text-slate-400"
                 }`}
               >
                 {s.label}
               </span>
             </div>
+            {/* Connector Line */}
             {idx < steps.length - 1 && (
-              <div
-                className={`h-px w-8 md:w-12 ${isDone ? "bg-emerald-400" : "bg-slate-200"}`}
-              />
+              <div className="flex-1 h-[2px] bg-slate-200 mx-2 -translate-y-4">
+                <div
+                  className={`h-full bg-emerald-500 transition-all duration-500 ${
+                    isDone ? "w-full" : "w-0"
+                  }`}
+                />
+              </div>
             )}
           </div>
         );
@@ -417,7 +423,7 @@ function Step3Persona({
                     text-sm italic leading-relaxed pl-3.5 border-l-2 transition-colors
                     ${isActive ? 'text-slate-700 border-slate-900' : 'text-slate-400 border-slate-200'}
                   `}>
-                    "{p.preview}"
+                    &quot;{p.preview}&quot;
                   </div>
                 </div>
               </div>

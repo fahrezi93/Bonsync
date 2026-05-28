@@ -1,40 +1,48 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { requireCurrentUserId } from "@/lib/auth";
+import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { ROAST_PERSONAS, type RoastPersona } from "@/lib/roasting";
 
-const VALID_PERSONAS: ReadonlyArray<RoastPersona> = [
-  "DEFAULT",
-  "MAMA",
-  "SULTAN",
-  "TETANGGA",
-  "DOSEN",
-];
+const monthFormatter = new Intl.DateTimeFormat("id-ID", {
+  month: "2-digit",
+  year: "numeric",
+});
+
+function isRoastPersona(persona: RoastPersona): boolean {
+  return (
+    persona === "DEFAULT" ||
+    persona === "MAMA" ||
+    persona === "SULTAN" ||
+    persona === "TETANGGA" ||
+    persona === "DOSEN"
+  );
+}
 
 export async function setRoastPersona(
   persona: RoastPersona,
 ): Promise<{ success: boolean; message: string }> {
-  if (!VALID_PERSONAS.includes(persona)) {
+  const userId = await auth();
+
+  if (!isRoastPersona(persona)) {
     return { success: false, message: "Persona tidak dikenali." };
   }
 
-  const userId = await requireCurrentUserId();
-
-  const monthFormatter = new Intl.DateTimeFormat("id-ID", {
-    month: "2-digit",
-    year: "numeric",
-  });
   const monthKey = monthFormatter.format(new Date());
 
   try {
+    const existing = await prisma.monthlyBudget.findUnique({
+      where: { userId_month: { userId, month: monthKey } },
+      select: { roastPersona: true },
+    });
+    const shouldRegenerateRoast = existing?.roastPersona !== persona;
+
     await prisma.monthlyBudget.upsert({
       where: { userId_month: { userId, month: monthKey } },
       update: {
         roastPersona: persona,
-        // Invalidate cached roast so it's regenerated dengan persona baru
-        latestRoast: null,
+        ...(shouldRegenerateRoast ? { latestRoast: null } : {}),
       },
       create: {
         userId,

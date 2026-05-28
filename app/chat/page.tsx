@@ -8,7 +8,10 @@ export const metadata: Metadata = {
     "Catat pengeluaran lewat chat atau minta AI roasting pola belanjamu bulan ini.",
 };
 
+import { requireOnboarding } from "@/lib/auth";
+
 export default async function ChatPage() {
+  await requireOnboarding();
   const expenseSummary = await getExpenseSummaryForChat();
 
   return (

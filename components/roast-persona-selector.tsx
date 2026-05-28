@@ -75,7 +75,7 @@ export function RoastPersonaSelector({ currentPersona }: RoastPersonaSelectorPro
     <div className="w-full premium-card p-6 md:p-8 relative overflow-hidden transition-all duration-300">
       <div className="mb-8 flex flex-col gap-2">
         <div className="flex items-center gap-2.5">
-          <Sparkles className="w-5 h-5 text-slate-400" />
+          <Sparkles className="size-5 text-slate-400" />
           <h2 className="text-xl md:text-2xl font-semibold tracking-tight text-slate-900">
             Persona AI Roaster
           </h2>
@@ -105,7 +105,7 @@ export function RoastPersonaSelector({ currentPersona }: RoastPersonaSelectorPro
             >
               <div className="flex items-start gap-4 md:gap-5">
                 <div className={`
-                  flex items-center justify-center w-12 h-12 rounded-2xl shrink-0 text-2xl transition-colors
+                  flex items-center justify-center size-12 rounded-2xl shrink-0 text-2xl transition-colors
                   ${isActive ? "bg-slate-100" : "bg-slate-50 group-hover:bg-slate-100/50"}
                 `}>
                   {p.emoji}
@@ -124,10 +124,10 @@ export function RoastPersonaSelector({ currentPersona }: RoastPersonaSelectorPro
                       )}
                     </div>
                     <div className={`
-                      w-5 h-5 rounded-full border flex items-center justify-center transition-colors shrink-0
+                      size-5 rounded-full border flex items-center justify-center transition-colors shrink-0
                       ${isActive ? "border-slate-900 bg-slate-900" : "border-slate-300 group-hover:border-slate-400"}
                     `}>
-                      {isActive && <div className="w-2 h-2 rounded-full bg-white" />}
+                      {isActive && <div className="size-2 rounded-full bg-white" />}
                     </div>
                   </div>
                   
@@ -139,7 +139,7 @@ export function RoastPersonaSelector({ currentPersona }: RoastPersonaSelectorPro
                     text-sm italic leading-relaxed pl-3.5 border-l-2 transition-colors
                     ${isActive ? 'text-slate-700 border-slate-900' : 'text-slate-400 border-slate-200'}
                   `}>
-                    "{p.preview}"
+                    &quot;{p.preview}&quot;
                   </div>
                 </div>
               </div>
@@ -167,8 +167,8 @@ export function RoastPersonaSelector({ currentPersona }: RoastPersonaSelectorPro
       {isPending && (
         <div className="absolute inset-0 bg-white/50 backdrop-blur-[2px] rounded-[24px] flex items-center justify-center z-10">
           <div className="flex items-center gap-2.5 px-4 py-2 bg-white rounded-full shadow-sm border border-slate-200 text-sm font-medium text-slate-600">
-            <span className="w-4 h-4 rounded-full border-2 border-slate-200 border-t-slate-800 animate-spin" />
-            Menyimpan...
+            <span className="size-4 rounded-full border-2 border-slate-200 border-t-slate-800 animate-spin" />
+            Menyimpan…
           </div>
         </div>
       )}

@@ -59,21 +59,21 @@ function parseMarkdown(text: string): React.ReactNode {
   return parts.map((part, index) => {
     if ((part.startsWith("**") && part.endsWith("**")) || (part.startsWith("__") && part.endsWith("__"))) {
       return (
-        <strong key={index} className="font-bold text-slate-900">
+        <strong key={`${index}-${part.slice(0,8)}`} className="font-bold text-slate-900">
           {part.slice(2, -2)}
         </strong>
       );
     }
     if ((part.startsWith("*") && part.endsWith("*")) || (part.startsWith("_") && part.endsWith("_"))) {
       return (
-        <em key={index} className="italic font-medium text-slate-800">
+        <em key={`${index}-${part.slice(0,8)}`} className="italic font-medium text-slate-800">
           {part.slice(1, -1)}
         </em>
       );
     }
     if (part.startsWith("`") && part.endsWith("`")) {
       return (
-        <code key={index} className="px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-rose-600 font-mono text-[12px]">
+        <code key={`${index}-${part.slice(0,8)}`} className="px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-rose-600 font-mono text-[12px]">
           {part.slice(1, -1)}
         </code>
       );
@@ -104,21 +104,26 @@ export function RoastingCard({
     typeof monthLabel === "string";
 
   useEffect(() => {
-    let i = 0;
+    let cancelled = false;
+    let idx = 0;
     const interval = setInterval(() => {
-      setDisplayedText(advice.substring(0, i + 1));
-      i++;
-      if (i >= advice.length) clearInterval(interval);
+      if (cancelled) return;
+      idx += 1;
+      setDisplayedText(advice.substring(0, idx));
+      if (idx >= advice.length) clearInterval(interval);
     }, 30);
-    return () => clearInterval(interval);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, [advice]);
 
   return (
     <div className="premium-card p-5 md:p-6 flex flex-col gap-4">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-50 border border-slate-200">
-            <Sparkles className="h-4 w-4 text-slate-500" />
+          <div className="flex size-8 items-center justify-center rounded-full bg-slate-50 border border-slate-200">
+            <Sparkles className="size-4 text-slate-500" />
           </div>
           <span className="text-sm font-bold text-slate-700">Evaluasi AI</span>
           {persona !== "DEFAULT" && (
@@ -131,7 +136,7 @@ export function RoastingCard({
 
         <div className="flex items-center gap-2 flex-wrap justify-end">
           <div className="flex items-center gap-2 bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-full">
-            <div className={`h-2 w-2 rounded-full ${cfg.indicatorStyle} animate-pulse`} />
+            <div className={`size-2 rounded-full ${cfg.indicatorStyle} animate-pulse`} />
             <span className={`text-xs font-bold ${cfg.textStyle}`}>
               Level: {cfg.label}
             </span>

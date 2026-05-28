@@ -1,6 +1,8 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
+import { Pool } from "pg";
+
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
@@ -16,13 +18,14 @@ function createPrismaClient(): PrismaClient {
 
   // Supabase pooler pakai self-signed certificate.
   // Force rejectUnauthorized: false di level pg.Pool config.
-  // Ini override apapun yang ada di connection string.
-  const adapter = new PrismaPg({
+  const pool = new Pool({
     connectionString,
     ssl: {
       rejectUnauthorized: false,
     },
   });
+  
+  const adapter = new PrismaPg(pool);
 
   return new PrismaClient({
     adapter,

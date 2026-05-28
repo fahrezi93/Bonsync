@@ -10,7 +10,8 @@
     "supabase:smtp": "node scripts/configure-supabase-smtp.mjs",
     "gemini:models": "node scripts/list-gemini-models.mjs",
     "reset-onboarding": "node scripts/reset-onboarding.mjs",
-    "list-users": "node scripts/list-users.mjs"
+    "list-users": "node scripts/list-users.mjs",
+    "doctor": "npx react-doctor@latest"
   },
   "dependencies": {
     "@google/genai": "^1.52.0",
@@ -45,6 +46,7 @@
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
+    "react-doctor": "^0.2.9",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

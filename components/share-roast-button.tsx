@@ -1,10 +1,22 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { toPng } from "html-to-image";
 import { Loader2, Share2, Download, X, Sparkles, Check } from "lucide-react";
 import type { RoastLevel, RoastPersona } from "@/lib/roasting";
+
+function subscribeToClientReady() {
+  return () => {};
+}
+
+function getClientReadySnapshot() {
+  return true;
+}
+
+function getServerReadySnapshot() {
+  return false;
+}
 
 interface ShareRoastButtonProps {
   advice: string;
@@ -94,7 +106,11 @@ export function ShareRoastButton(props: ShareRoastButtonProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const previewWrapRef = useRef<HTMLDivElement>(null);
 
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(
+    subscribeToClientReady,
+    getClientReadySnapshot,
+    getServerReadySnapshot,
+  );
   const [open, setOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [dataUrl, setDataUrl] = useState<string | null>(null);
@@ -107,10 +123,6 @@ export function ShareRoastButton(props: ShareRoastButtonProps) {
   const personaMeta = PERSONA_LABEL[persona];
   const score = Math.max(0, Math.min(100, Math.round(survivalScore)));
   const userName = (displayName || "Vibe Coder").trim();
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   /* ─── Lock body scroll saat modal open ─── */
   useEffect(() => {

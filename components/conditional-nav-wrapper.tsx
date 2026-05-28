@@ -11,10 +11,11 @@ export function ConditionalNavWrapper({
 }) {
   const pathname = usePathname();
 
-  // Hide nav entirely on auth pages or root landing page (unauthenticated)
+  // Hide nav entirely on auth pages, onboarding, or root landing page
   if (
     pathname === "/login" ||
     pathname === "/register" ||
+    pathname.startsWith("/onboarding") ||
     (pathname === "/" && !isAuthenticated)
   ) {
     return null;

@@ -6,6 +6,8 @@ import { ProfileDropdown } from "@/components/profile-dropdown";
 import { prisma } from "@/lib/prisma";
 import { getProfileMetadata, getSignedAvatarUrl } from "@/lib/profile";
 
+const monthFormatter = new Intl.DateTimeFormat("id-ID", { month: "2-digit", year: "numeric" });
+
 export async function Nav() {
   const supabase = await createClient();
   const {
@@ -28,7 +30,7 @@ export async function Nav() {
     displayName = profile.displayName;
     avatarUrl = await getSignedAvatarUrl(profile.avatarPath);
 
-    const monthKey = new Intl.DateTimeFormat("id-ID", { month: "2-digit", year: "numeric" }).format(new Date());
+    const monthKey = monthFormatter.format(new Date());
     const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 
     const [budget, expenses] = await Promise.all([

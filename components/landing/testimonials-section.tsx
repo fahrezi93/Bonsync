@@ -51,7 +51,7 @@ export function TestimonialsSection() {
       {/* Clean Grid Wall */}
       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 pb-4 relative z-10">
         {testimonials.map((t, i) => (
-          <RevealSection key={i} delay={i * 100}>
+          <RevealSection key={t.name} delay={i * 100}>
             {/* Minimalist card with soft border and subtle hover */}
             <div className="bg-white border border-slate-100 rounded-[24px] p-7 shadow-sm hover:border-slate-200/80 transition-all duration-300 flex flex-col justify-between h-full group">
               <div>
@@ -59,7 +59,7 @@ export function TestimonialsSection() {
                 <div className="flex justify-between items-center mb-5">
                   <div className="flex gap-0.5">
                     {[1, 2, 3, 4, 5].map((s) => (
-                      <Star key={s} className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                      <Star key={s} className="size-3.5 text-amber-400 fill-amber-400" />
                     ))}
                   </div>
 
@@ -77,7 +77,7 @@ export function TestimonialsSection() {
               {/* User Identity Footer Card */}
               <div className="flex items-center gap-3 border-t border-slate-50 pt-5 mt-auto">
                 {/* Minimalist Flat Avatar */}
-                <div className={`w-9 h-9 rounded-full ${t.avatarBg} flex items-center justify-center font-bold text-[12px] select-none transition-transform duration-300 group-hover:scale-105`}>
+                <div className={`size-9 rounded-full ${t.avatarBg} flex items-center justify-center font-bold text-[12px] select-none transition-transform duration-300 group-hover:scale-105`}>
                   {t.initial}
                 </div>
                 <div>

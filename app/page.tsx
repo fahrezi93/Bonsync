@@ -16,6 +16,7 @@ import { Utensils, Car, ShoppingBag, Receipt, ChevronRight, Wallet } from "lucid
 
 const monthFormatter = new Intl.DateTimeFormat("id-ID", { month: "2-digit", year: "numeric" });
 const monthLabelFormatter = new Intl.DateTimeFormat("id-ID", { month: "long", year: "numeric" });
+const shortDateFormatter = new Intl.DateTimeFormat("id-ID", { dateStyle: "short" });
 
 const idr = new Intl.NumberFormat("id-ID", {
   style: "currency",
@@ -170,8 +171,8 @@ export default async function HomePage() {
       {/* Budget alert banner */}
       {danger && (
         <div className="premium-card p-4 md:p-5 flex items-center gap-4 border-rose-200 bg-rose-50/50 animate-fade-in-up">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-600">
-            <Wallet className="h-5 w-5" />
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-600">
+            <Wallet className="size-5" />
           </div>
           <div className="flex-1">
             <p className="text-sm font-bold text-rose-800">Budget Kritis!</p>
@@ -186,8 +187,8 @@ export default async function HomePage() {
       )}
       {warning && !danger && (
         <div className="premium-card p-4 md:p-5 flex items-center gap-4 border-amber-200 bg-amber-50/50 animate-fade-in-up">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-600">
-            <Wallet className="h-5 w-5" />
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-600">
+            <Wallet className="size-5" />
           </div>
           <div className="flex-1">
             <p className="text-sm font-bold text-amber-800">Mulai Hemat</p>
@@ -212,8 +213,8 @@ export default async function HomePage() {
                    {data.monthLabel}
                  </span>
               </div>
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-50 border border-slate-100 text-slate-400">
-                <Wallet className="w-5 h-5" />
+              <div className="flex size-10 items-center justify-center rounded-full bg-slate-50 border border-slate-100 text-slate-400">
+                <Wallet className="size-5" />
               </div>
             </div>
             
@@ -233,8 +234,13 @@ export default async function HomePage() {
           </div>
 
           <div className="grid grid-cols-2 gap-4 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
-             <div className="premium-card p-5 flex flex-col items-center justify-center min-h-[150px]">
-                <SurvivalScore score={score} />
+             <div className="premium-card p-6 flex flex-col justify-between min-h-[150px]">
+                <div>
+                   <span className="text-sm font-bold text-slate-500 mb-1 block">Survival Score</span>
+                </div>
+                <div className="flex justify-center items-center flex-1 mt-1">
+                   <SurvivalScore score={score} />
+                </div>
              </div>
              
              <div className="premium-card p-6 flex flex-col justify-between min-h-[150px]">
@@ -258,7 +264,7 @@ export default async function HomePage() {
           <Suspense fallback={
             <div className="premium-card p-6 animate-pulse flex flex-col gap-4">
                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-slate-100 rounded-full" />
+                  <div className="size-8 bg-slate-100 rounded-full" />
                   <div className="bg-slate-100 h-4 w-32 rounded" />
                </div>
                <div className="h-20 bg-slate-50 rounded-2xl w-full mt-2"></div>
@@ -281,8 +287,8 @@ export default async function HomePage() {
               <div className="premium-card p-6 flex flex-col justify-center items-center animate-fade-in-up h-[320px] sm:h-auto min-h-[300px]" style={{ animationDelay: '200ms' }}>
                 <div className="flex w-full items-center justify-between mb-4">
                    <h3 className="text-sm font-bold text-slate-700">Sebaran Pengeluaran</h3>
-                   <div className="flex h-8 w-8 items-center justify-center bg-slate-50 border border-slate-100 rounded-full">
-                     <Utensils className="w-4 h-4 text-slate-400" />
+                   <div className="flex size-8 items-center justify-center bg-slate-50 border border-slate-100 rounded-full">
+                     <Utensils className="size-4 text-slate-400" />
                    </div>
                 </div>
                 <div className="w-full flex-1 flex items-center justify-center min-h-[200px]">
@@ -304,7 +310,7 @@ export default async function HomePage() {
                   </Link>
                 </div>
                 
-                <div className="flex-1 overflow-y-auto custom-scrollbar px-2 py-2 flex flex-col gap-1 pb-4">
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-2 flex flex-col gap-1 pb-4">
                   {data.recentExpenses.map((exp) => {
                     const catStyle = getCategoryStyle(exp.category, data.customCategories);
                     const Icon = catStyle.Icon;
@@ -315,15 +321,15 @@ export default async function HomePage() {
                         className="flex justify-between items-center px-4 py-3 rounded-2xl hover:bg-slate-50 active:bg-slate-100/50 transition-colors group"
                       >
                         <div className="flex items-center gap-4 min-w-0 flex-1">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${catStyle.color}`}>
-                            <Icon className="w-4.5 h-4.5" />
+                          <div className={`size-10 rounded-full flex items-center justify-center shrink-0 ${catStyle.color}`}>
+                            <Icon className="size-4.5" />
                           </div>
                           <div className="flex flex-col min-w-0 flex-1 gap-1">
                             <p className="text-sm font-bold text-slate-800 leading-none truncate">
                               {catStyle.label}
                             </p>
                             <p className="text-xs font-medium text-slate-500 flex items-center gap-2">
-                              <span className="whitespace-nowrap">{new Intl.DateTimeFormat('id-ID', { dateStyle: 'short' }).format(exp.date)}</span>
+                              <span className="whitespace-nowrap">{shortDateFormatter.format(exp.date)}</span>
                               {exp.source === 'QUICK_RECEIPT' && <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full whitespace-nowrap">Nota</span>}
                               {exp.source === 'SPLIT_BILL' && <span className="text-[10px] font-bold bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full whitespace-nowrap">Split</span>}
                             </p>
@@ -333,7 +339,7 @@ export default async function HomePage() {
                           <span className="text-sm font-bold text-slate-800 leading-none">
                             {idr.format(exp.totalAmount)}
                           </span>
-                          <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-colors" />
+                          <ChevronRight className="size-4 text-slate-400 group-hover:text-slate-600 transition-colors" />
                         </div>
                       </Link>
                     );

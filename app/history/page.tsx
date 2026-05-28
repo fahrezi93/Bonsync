@@ -6,7 +6,7 @@ import Link from "next/link";
 import { HistoryFilters } from "@/components/history-filters";
 import { HistoryPagination } from "@/components/history-pagination";
 import { EditExpenseDialog } from "@/components/edit-expense-dialog";
-import { requireCurrentUserId } from "@/lib/auth";
+import { requireOnboarding } from "@/lib/auth";
 import type { Prisma } from "@prisma/client";
 import { getUserCategories } from "@/actions/category-actions";
 import { getCategoryStyle } from "@/lib/categories";
@@ -52,7 +52,7 @@ function parseMonthRange(monthKey: string): { gte: Date; lt: Date } | null {
 }
 
 async function getHistory(params: { page: number; category: string; month: string }) {
-  const userId = await requireCurrentUserId();
+  const userId = await requireOnboarding();
   const { page, category, month } = params;
   const skip = (page - 1) * PAGE_SIZE;
 

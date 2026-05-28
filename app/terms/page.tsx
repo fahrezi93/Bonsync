@@ -11,7 +11,7 @@ export default function TermsOfServicePage() {
     <div className="min-h-screen bg-slate-50 py-20 px-6">
       <div className="max-w-3xl mx-auto bg-white rounded-[32px] p-8 md:p-12 shadow-[0_20px_50px_rgba(0,0,0,0.02)] border border-slate-200/60">
         <Link href="/" className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-600 hover:text-emerald-700 mb-8 transition-colors">
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className="size-4" />
           Kembali ke Beranda
         </Link>
         
@@ -49,14 +49,14 @@ export default function TermsOfServicePage() {
           <section className="space-y-3">
             <h2 className="text-xl font-bold text-slate-800">4. Fitur AI Roasting</h2>
             <p>
-              Aplikasi BonSync menyertakan fitur "AI Roasting" yang dirancang untuk memberikan komentar bernada humor/sarkasme mengenai kebiasaan pengeluaran Anda. Dengan menggunakan fitur ini, Anda memahami bahwa komentar tersebut hanya untuk hiburan dan bukan saran finansial profesional.
+              Aplikasi BonSync menyertakan fitur &quot;AI Roasting&quot; yang dirancang untuk memberikan komentar bernada humor/sarkasme mengenai kebiasaan pengeluaran Anda. Dengan menggunakan fitur ini, Anda memahami bahwa komentar tersebut hanya untuk hiburan dan bukan saran finansial profesional.
             </p>
           </section>
 
           <section className="space-y-3">
             <h2 className="text-xl font-bold text-slate-800">5. Penafian Jaminan (Disclaimer)</h2>
             <p>
-              Layanan disediakan "sebagaimana adanya". Kami tidak menjamin bahwa aplikasi akan selalu bebas dari kesalahan, gangguan, atau akan selalu memenuhi harapan spesifik Anda.
+              Layanan disediakan &quot;sebagaimana adanya&quot;. Kami tidak menjamin bahwa aplikasi akan selalu bebas dari kesalahan, gangguan, atau akan selalu memenuhi harapan spesifik Anda.
             </p>
           </section>
 

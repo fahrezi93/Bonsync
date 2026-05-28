@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { SetBudgetForm } from "@/components/set-budget-form";
 import { RoastLevelSelector } from "@/components/roast-level-selector";
 import { RoastPersonaSelector } from "@/components/roast-persona-selector";
-import { requireCurrentUserId } from "@/lib/auth";
+import { requireOnboarding } from "@/lib/auth";
 import type { RoastLevel, RoastPersona } from "@/lib/roasting";
 import { createClient } from "@/utils/supabase/server";
 import { getProfileMetadata, getSignedAvatarUrl } from "@/lib/profile";
@@ -15,7 +15,7 @@ const monthFormatter = new Intl.DateTimeFormat("id-ID", { month: "2-digit", year
 const monthLabelFormatter = new Intl.DateTimeFormat("id-ID", { month: "long", year: "numeric" });
 
 export default async function SettingsPage() {
-  const userId = await requireCurrentUserId();
+  const userId = await requireOnboarding();
   const supabase = await createClient();
   const {
     data: { user },
@@ -28,12 +28,13 @@ export default async function SettingsPage() {
   });
   const avatarUrl = await getSignedAvatarUrl(profile.avatarPath);
 
-  const budget = await prisma.monthlyBudget.findUnique({
-    where: { userId_month: { userId, month: monthKey } },
-    select: { limitAmount: true, roastLevel: true, roastPersona: true },
-  });
-
-  const categories = await getUserCategories();
+  const [budget, categories] = await Promise.all([
+    prisma.monthlyBudget.findUnique({
+      where: { userId_month: { userId, month: monthKey } },
+      select: { limitAmount: true, roastLevel: true, roastPersona: true },
+    }),
+    getUserCategories(),
+  ]);
 
   const currentRoastLevel: RoastLevel = (budget?.roastLevel as RoastLevel) ?? "MEDIUM";
   const currentRoastPersona: RoastPersona = (budget?.roastPersona as RoastPersona) ?? "DEFAULT";

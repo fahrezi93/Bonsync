@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireCurrentUserId } from "@/lib/auth";
+import { auth } from "@/lib/auth";
 
 export interface BudgetActionState {
   success: boolean;
@@ -33,6 +33,7 @@ export async function setBudget(
   _prevState: BudgetActionState,
   formData: FormData
 ): Promise<BudgetActionState> {
+  const userId = await auth();
   const raw = formData.get("limitAmount");
   const limit = parseBudgetInput(raw);
 
@@ -44,12 +45,20 @@ export async function setBudget(
   }
 
   const monthKey = monthFormatter.format(new Date());
-  const userId = await requireCurrentUserId();
 
   try {
+    const existing = await prisma.monthlyBudget.findUnique({
+      where: { userId_month: { userId, month: monthKey } },
+      select: { limitAmount: true },
+    });
+    const shouldRegenerateRoast = existing?.limitAmount !== limit;
+
     await prisma.monthlyBudget.upsert({
       where: { userId_month: { userId, month: monthKey } },
-      update: { limitAmount: limit, latestRoast: null },
+      update: {
+        limitAmount: limit,
+        ...(shouldRegenerateRoast ? { latestRoast: null } : {}),
+      },
       create: { userId, month: monthKey, limitAmount: limit, latestRoast: null },
     });
 

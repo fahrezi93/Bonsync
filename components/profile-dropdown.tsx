@@ -2,8 +2,15 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { LogOut, ChevronDown, Wallet, History, Shield, AlertTriangle, Skull } from "lucide-react";
 import { signOut } from "@/actions/auth-actions";
+
+const idrFormatter = new Intl.NumberFormat("id-ID", {
+  style: "currency",
+  currency: "IDR",
+  maximumFractionDigits: 0,
+});
 
 interface ProfileDropdownProps {
   userEmail: string;
@@ -40,14 +47,7 @@ export function ProfileDropdown({
   const username = displayName || userEmail.split("@")[0];
   const initial = (username || userEmail || "B")[0].toUpperCase();
 
-  // Format rupiah helper
-  const idr = (val: number) => {
-    return new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      maximumFractionDigits: 0,
-    }).format(val);
-  };
+  // Format rupiah helper removed — use idrFormatter.format(val) directly
 
   // Dynamic Survival level config
   let survivalLabel = "Status: 🛡️ AMAN BUNG!";
@@ -71,6 +71,7 @@ export function ProfileDropdown({
     <div className="relative" ref={dropdownRef}>
       {/* Trigger Button */}
       <button
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
         className={`flex items-center gap-2.5 p-1 rounded-2xl border transition-all duration-300 select-none cursor-pointer ${
           isOpen
@@ -80,13 +81,15 @@ export function ProfileDropdown({
       >
         <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-white/40 shadow-[inset_0_1px_2px_rgba(255,255,255,0.4)]">
           {avatarUrl ? (
-            <img
+            <Image
               src={avatarUrl}
               alt=""
+              width={24}
+              height={24}
               className="size-6 rounded-lg object-cover shadow-sm"
             />
           ) : (
-            <div className="w-6 h-6 rounded-lg bg-slate-800 flex items-center justify-center text-xs font-bold text-white shadow-sm">
+            <div className="size-6 rounded-lg bg-slate-800 flex items-center justify-center text-xs font-bold text-white shadow-sm">
               {initial}
             </div>
           )}
@@ -95,7 +98,7 @@ export function ProfileDropdown({
           </span>
         </div>
         <ChevronDown
-          className={`w-3.5 h-3.5 text-slate-400 mr-1.5 transition-transform duration-300 ${
+          className={`size-3.5 text-slate-400 mr-1.5 transition-transform duration-300 ${
             isOpen ? "rotate-180 text-emerald-500" : ""
           }`}
           strokeWidth={2.5}
@@ -108,13 +111,15 @@ export function ProfileDropdown({
           {/* Header Profile */}
           <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
             {avatarUrl ? (
-              <img
+              <Image
                 src={avatarUrl}
                 alt=""
+                width={48}
+                height={48}
                 className="size-12 rounded-xl object-cover shadow-sm"
               />
             ) : (
-              <div className="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center text-lg font-bold text-white shadow-sm">
+              <div className="size-12 rounded-xl bg-slate-800 flex items-center justify-center text-lg font-bold text-white shadow-sm">
                 {initial}
               </div>
             )}
@@ -135,7 +140,7 @@ export function ProfileDropdown({
                 Survival Score
               </span>
               <span className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${survivalColor}`}>
-                <StatusIcon className="w-3 h-3" />
+                <StatusIcon className="size-3" />
                 {survivalLabel.split(": ")[1]}
               </span>
             </div>
@@ -159,8 +164,8 @@ export function ProfileDropdown({
               </div>
 
               <div className="flex items-center justify-between text-xs font-medium text-slate-500">
-                <span>{idr(spent)} terpakai</span>
-                <span>{idr(budgetLimit)} limit</span>
+                <span>{idrFormatter.format(spent)} terpakai</span>
+                <span>{idrFormatter.format(budgetLimit)} limit</span>
               </div>
             </div>
           </div>
@@ -173,7 +178,7 @@ export function ProfileDropdown({
               className="flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-all duration-200"
             >
               <div className="flex items-center gap-2">
-                <Wallet className="w-4 h-4 text-slate-400" />
+                <Wallet className="size-4 text-slate-400" />
                 <span>Pengaturan Akun</span>
               </div>
             </Link>
@@ -184,7 +189,7 @@ export function ProfileDropdown({
               className="flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-all duration-200"
             >
               <div className="flex items-center gap-2">
-                <History className="w-4 h-4 text-slate-400" />
+                <History className="size-4 text-slate-400" />
                 <span>Riwayat Transaksi</span>
               </div>
             </Link>
@@ -196,7 +201,7 @@ export function ProfileDropdown({
               type="submit"
               className="group flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-100 hover:border-slate-300 shadow-sm active:scale-95 transition-all duration-300 font-medium text-sm cursor-pointer"
             >
-              <LogOut className="w-4 h-4 transition-transform duration-300 group-hover:-translate-x-0.5" />
+              <LogOut className="size-4 transition-transform duration-300 group-hover:-translate-x-0.5" />
               <span>Keluar dari Akun</span>
             </button>
           </form>

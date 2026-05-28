@@ -3,7 +3,7 @@
 import { Type } from "@google/genai";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireCurrentUserId } from "@/lib/auth";
+import { auth } from "@/lib/auth";
 import {
   computeParticipantSplit,
   computeReceiptTotals,
@@ -59,12 +59,19 @@ const roastSchema = {
 
 import { generateContentWithFallback } from "@/lib/ai-fallback";
 
+const idrFormatter = new Intl.NumberFormat("id-ID", {
+  style: "currency",
+  currency: "IDR",
+  maximumFractionDigits: 0,
+});
+
+const monthFormatter = new Intl.DateTimeFormat("id-ID", {
+  month: "2-digit",
+  year: "numeric",
+});
+
 function formatRupiah(value: number): string {
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(value);
+  return idrFormatter.format(value);
 }
 
 function parseGeminiError(error: unknown): string {
@@ -153,11 +160,13 @@ async function classifyAndRoastExpense(
 }
 
 const ROAST_TIMEOUT_MS = 5_000;
-const ROAST_FALLBACK = {
-  category: "OTHERS",
-  aiAdvice: "Tersimpan! AI lagi sibuk, kategori menyusul.",
-  fallbackUsed: true,
-};
+function createRoastFallback() {
+  return {
+    category: "OTHERS",
+    aiAdvice: "Tersimpan! AI lagi sibuk, kategori menyusul.",
+    fallbackUsed: true,
+  };
+}
 
 /** Versi bergaransi cepat — maksimal 5 detik, lalu fallback */
 async function classifyWithTimeout(
@@ -167,8 +176,8 @@ async function classifyWithTimeout(
 ): Promise<{ category: string; aiAdvice: string; fallbackUsed: boolean }> {
   return Promise.race([
     classifyAndRoastExpense(userId, amount, promptContext),
-    new Promise<typeof ROAST_FALLBACK>((resolve) =>
-      setTimeout(() => resolve(ROAST_FALLBACK), ROAST_TIMEOUT_MS),
+    new Promise<ReturnType<typeof createRoastFallback>>((resolve) =>
+      setTimeout(() => resolve(createRoastFallback()), ROAST_TIMEOUT_MS),
     ),
   ]);
 }
@@ -186,6 +195,8 @@ function getOwnedReceiptImagePath(userId: string, imagePath: string | undefined)
 }
 
 export async function extractReceiptDraft(formData: FormData): Promise<ExtractReceiptResult> {
+  await auth();
+
   const file = formData.get("receipt") as File | null;
   if (!file || file.size === 0) {
     return { success: false, message: "File nota belum dipilih." };
@@ -294,7 +305,7 @@ export async function extractReceiptDraft(formData: FormData): Promise<ExtractRe
 }
 
 export async function saveQuickReceiptExpense(draftPayload: ReceiptDraft): Promise<SaveExpenseResult> {
-  const userId = await requireCurrentUserId();
+  const userId = await auth();
   const draft = sanitizeReceiptDraft(draftPayload);
   const totals = computeReceiptTotals(draft);
   const receiptImagePath = getOwnedReceiptImagePath(userId, draft.imageUrl);
@@ -350,7 +361,6 @@ export async function saveQuickReceiptExpense(draftPayload: ReceiptDraft): Promi
         },
       });
 
-      const monthFormatter = new Intl.DateTimeFormat("id-ID", { month: "2-digit", year: "numeric" });
       const monthKey = monthFormatter.format(new Date());
       await tx.monthlyBudget.updateMany({
         where: { userId, month: monthKey },
@@ -378,7 +388,7 @@ export async function saveSplitBillExpense(
   assignments: SplitAssignments,
   selfName = "Saya",
 ): Promise<SaveExpenseResult> {
-  const userId = await requireCurrentUserId();
+  const userId = await auth();
   const draft = sanitizeReceiptDraft(draftPayload);
   const receiptImagePath = getOwnedReceiptImagePath(userId, draft.imageUrl);
   const participantNames = Array.from(
@@ -451,7 +461,6 @@ export async function saveSplitBillExpense(
         },
       });
 
-      const monthFormatter = new Intl.DateTimeFormat("id-ID", { month: "2-digit", year: "numeric" });
       const monthKey = monthFormatter.format(new Date());
       await tx.monthlyBudget.updateMany({
         where: { userId, month: monthKey },
@@ -483,7 +492,7 @@ export async function addManualExpense(
   _prevState: ManualExpenseState,
   formData: FormData,
 ): Promise<ManualExpenseState> {
-  const userId = await requireCurrentUserId();
+  const userId = await auth();
   const description = (formData.get("description") as string)?.trim();
   const amountRaw = formData.get("amount");
   const amount = Number(amountRaw);
@@ -514,7 +523,6 @@ export async function addManualExpense(
       },
     });
 
-    const monthFormatter = new Intl.DateTimeFormat("id-ID", { month: "2-digit", year: "numeric" });
     const monthKey = monthFormatter.format(new Date());
     await prisma.monthlyBudget.updateMany({
       where: { userId, month: monthKey },
@@ -536,7 +544,7 @@ export async function addManualExpense(
 }
 
 export async function deleteExpense(id: string): Promise<{ success: boolean; message: string }> {
-  const userId = await requireCurrentUserId();
+  const userId = await auth();
   if (!id) return { success: false, message: "ID tidak valid." };
   try {
     const expense = await prisma.expense.findFirst({
@@ -547,7 +555,6 @@ export async function deleteExpense(id: string): Promise<{ success: boolean; mes
       return { success: false, message: "Pengeluaran tidak ditemukan." };
     }
 
-    const monthFormatter = new Intl.DateTimeFormat("id-ID", { month: "2-digit", year: "numeric" });
     const expenseMonth = monthFormatter.format(expense.date);
 
     await prisma.$transaction([
@@ -573,7 +580,7 @@ export interface EditExpenseData {
 }
 
 export async function editExpense(data: EditExpenseData): Promise<{ success: boolean; message: string }> {
-  const userId = await requireCurrentUserId();
+  const userId = await auth();
   if (!data.id) return { success: false, message: "ID tidak valid." };
   if (!data.description) return { success: false, message: "Deskripsi tidak boleh kosong." };
   if (data.totalAmount <= 0) return { success: false, message: "Nominal tidak valid." };
@@ -616,7 +623,7 @@ export async function editExpense(data: EditExpenseData): Promise<{ success: boo
       prisma.monthlyBudget.updateMany({
         where: {
           userId,
-          month: new Intl.DateTimeFormat("id-ID", { month: "2-digit", year: "numeric" }).format(existing.date),
+          month: monthFormatter.format(existing.date),
         },
         data: { latestRoast: null },
       }),
@@ -669,7 +676,7 @@ function computeEditedReceiptAmounts(data: EditReceiptExpenseData, isSplitBill: 
 export async function editReceiptExpense(
   data: EditReceiptExpenseData,
 ): Promise<{ success: boolean; message: string }> {
-  const userId = await requireCurrentUserId();
+  const userId = await auth();
   const merchantName = data.merchantName.trim();
 
   if (!data.expenseId) return { success: false, message: "ID transaksi tidak valid." };
@@ -746,7 +753,7 @@ export async function editReceiptExpense(
         },
       });
 
-      const monthKey = new Intl.DateTimeFormat("id-ID", { month: "2-digit", year: "numeric" }).format(existing.date);
+      const monthKey = monthFormatter.format(existing.date);
       await tx.monthlyBudget.updateMany({
         where: { userId, month: monthKey },
         data: { latestRoast: null },

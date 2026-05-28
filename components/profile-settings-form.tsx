@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState, useTransition } from "react";
+import Image from "next/image";
 import { Camera, Loader2, Save, UserRound } from "lucide-react";
 import { updateProfile, type ProfileActionState } from "@/actions/auth-actions";
 import { createClient } from "@/utils/supabase/client";
@@ -91,9 +92,11 @@ export function ProfileSettingsForm({
       <div className="flex flex-col sm:flex-row gap-6 md:gap-8 items-start sm:items-center p-5 rounded-2xl border border-slate-100 bg-slate-50/50">
         <div className="relative size-24 shrink-0 overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm flex items-center justify-center">
           {previewUrl ? (
-            <img
+            <Image
               src={previewUrl}
               alt="Avatar profil"
+              width={96}
+              height={96}
               className="size-full object-cover"
             />
           ) : (

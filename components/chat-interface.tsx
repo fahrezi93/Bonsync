@@ -152,11 +152,15 @@ export function ChatInterface({ expenseSummary }: ChatInterfaceProps) {
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
   useEffect(() => {
-    setVoiceSupported(getSpeechRecognitionCtor() !== null);
+    const voiceSupportTimer = setTimeout(() => {
+      setVoiceSupported(getSpeechRecognitionCtor() !== null);
+    }, 0);
+    const recognition = recognitionRef.current;
     return () => {
+      clearTimeout(voiceSupportTimer);
       // Cleanup recognition saat component unmount
       try {
-        recognitionRef.current?.abort();
+        recognition?.abort();
       } catch {
         // ignore
       }

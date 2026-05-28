@@ -42,7 +42,7 @@ export default function PrivacyPolicyPage() {
             <h2 className="text-xl font-bold text-slate-800">3. Bagaimana Kami Menggunakan Informasi Anda</h2>
             <p>Informasi yang kami kumpulkan digunakan untuk:</p>
             <ul className="list-disc pl-5 space-y-1">
-              <li>Menyediakan layanan pencatatan pengeluaran dan "split bill".</li>
+              <li>Menyediakan layanan pencatatan pengeluaran dan &quot;split bill&quot;.</li>
               <li>Menghasilkan analisis pengeluaran (AI Roasting) menggunakan kecerdasan buatan.</li>
               <li>Meningkatkan pengalaman pengguna dan keamanan aplikasi.</li>
             </ul>

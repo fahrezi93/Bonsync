@@ -3,8 +3,8 @@
 import { Type } from "@google/genai";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { requireCurrentUserId } from "@/lib/auth";
-import { buildRoastPrompt } from "@/lib/roasting";
+import { auth } from "@/lib/auth";
+import { buildRoastPrompt, normalizeRoastText } from "@/lib/roasting";
 
 /* ─── Types ─── */
 export interface ChatMessage {
@@ -32,6 +32,8 @@ export interface SaveChatExpenseResult {
 }
 
 import { generateContentWithFallback } from "@/lib/ai-fallback";
+
+const monthFormatter = new Intl.DateTimeFormat("id-ID", { month: "2-digit", year: "numeric" });
 
 async function callGemini(prompt: string, schema?: object): Promise<string> {
   const res = await generateContentWithFallback({
@@ -64,6 +66,8 @@ export async function processChatMessage(
   expenseSummary: string,
   history: { role: string; content: string }[] = [],
 ): Promise<ChatActionResult> {
+  await auth();
+
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey) {
@@ -149,7 +153,7 @@ export async function saveChatExpense(
   description: string,
   amount: number,
 ): Promise<SaveChatExpenseResult> {
-  const userId = await requireCurrentUserId();
+  const userId = await auth();
   if (!description || amount <= 0) {
     return { success: false, message: "Data pengeluaran tidak valid." };
   }
@@ -198,7 +202,6 @@ export async function saveChatExpense(
       },
     });
 
-    const monthFormatter = new Intl.DateTimeFormat("id-ID", { month: "2-digit", year: "numeric" });
     const monthKey = monthFormatter.format(new Date());
     await prisma.monthlyBudget.updateMany({
       where: { userId, month: monthKey },
@@ -217,11 +220,10 @@ export async function saveChatExpense(
 
 /* ─── Get expense summary for AI context ─── */
 export async function getExpenseSummaryForChat(): Promise<string> {
-  const userId = await requireCurrentUserId();
+  const userId = await auth();
 
   try {
     const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-    const monthFormatter = new Intl.DateTimeFormat("id-ID", { month: "2-digit", year: "numeric" });
     const monthKey = monthFormatter.format(new Date());
 
     const [budget, expenses] = await Promise.all([
@@ -259,8 +261,7 @@ export async function getExpenseSummaryForChat(): Promise<string> {
 // Untuk tampilan dashboard, gunakan getMonthlyRoasting() dari @/lib/roasting
 // yang sudah menggunakan React.cache() untuk per-request memoization.
 export async function generateMonthlyRoasting(): Promise<string> {
-  const userId = await requireCurrentUserId();
-  const monthFormatter = new Intl.DateTimeFormat("id-ID", { month: "2-digit", year: "numeric" });
+  const userId = await auth();
   const monthKey = monthFormatter.format(new Date());
 
   // Cek cache DB dulu — hanya generate ulang jika latestRoast null
@@ -272,7 +273,7 @@ export async function generateMonthlyRoasting(): Promise<string> {
       select: { latestRoast: true, roastLevel: true, roastPersona: true },
     });
     if (cachedBudget?.latestRoast) {
-      return cachedBudget.latestRoast;
+      return normalizeRoastText(cachedBudget.latestRoast);
     }
   } catch {
     // Gagal baca DB → lanjut generate
@@ -293,7 +294,7 @@ export async function generateMonthlyRoasting(): Promise<string> {
 
   try {
     const reply = await callGemini(prompt);
-    const roast = reply.trim();
+    const roast = normalizeRoastText(reply);
 
     // Simpan ke DB supaya request berikutnya tidak generate ulang
     try {

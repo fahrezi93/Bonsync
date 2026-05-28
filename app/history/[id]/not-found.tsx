@@ -4,8 +4,8 @@ import { ReceiptText } from "lucide-react";
 export default function ExpenseNotFound() {
   return (
     <div className="mx-auto flex min-h-[60vh] max-w-md flex-col items-center justify-center gap-5 px-4 text-center">
-      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 border border-slate-200">
-        <ReceiptText className="h-8 w-8 text-slate-400" />
+      <div className="flex size-16 items-center justify-center rounded-2xl bg-slate-100 border border-slate-200">
+        <ReceiptText className="size-8 text-slate-400" />
       </div>
       <div className="space-y-1">
         <h2 className="text-lg font-bold text-slate-800">Pengeluaran tidak ditemukan</h2>

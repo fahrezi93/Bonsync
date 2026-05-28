@@ -43,7 +43,9 @@ function getLoginErrorRedirect(
 }
 
 export async function GET(request: NextRequest) {
-  const { searchParams, origin } = new URL(request.url);
+  const requestUrl = new URL(request.url);
+  const searchParams = requestUrl.searchParams;
+  const origin = process.env.NEXT_PUBLIC_SITE_URL || requestUrl.origin;
   const code = searchParams.get("code");
   const token_hash = searchParams.get("token_hash");
   const type = searchParams.get("type");

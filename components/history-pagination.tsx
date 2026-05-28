@@ -2,7 +2,6 @@
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useCallback } from "react";
 
 interface HistoryPaginationProps {
   currentPage: number;
@@ -10,18 +9,15 @@ interface HistoryPaginationProps {
 }
 
 export function HistoryPagination({ currentPage, totalPages }: HistoryPaginationProps) {
-  const router = useRouter();
+  const { push } = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const goToPage = useCallback(
-    (page: number) => {
-      const params = new URLSearchParams(searchParams.toString());
-      params.set("page", String(page));
-      router.push(`${pathname}?${params.toString()}`);
-    },
-    [router, pathname, searchParams],
-  );
+  const goToPage = (page: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("page", String(page));
+    push(`${pathname}?${params.toString()}`);
+  };
 
   if (totalPages <= 1) return null;
 
@@ -31,10 +27,10 @@ export function HistoryPagination({ currentPage, totalPages }: HistoryPagination
         type="button"
         onClick={() => goToPage(currentPage - 1)}
         disabled={currentPage <= 1}
-        className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        className="flex size-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         aria-label="Halaman sebelumnya"
       >
-        <ChevronLeft className="h-4 w-4" />
+        <ChevronLeft className="size-4" />
       </button>
 
       <div className="flex items-center gap-1">
@@ -83,10 +79,10 @@ export function HistoryPagination({ currentPage, totalPages }: HistoryPagination
         type="button"
         onClick={() => goToPage(currentPage + 1)}
         disabled={currentPage >= totalPages}
-        className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        className="flex size-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         aria-label="Halaman berikutnya"
       >
-        <ChevronRight className="h-4 w-4" />
+        <ChevronRight className="size-4" />
       </button>
     </div>
   );

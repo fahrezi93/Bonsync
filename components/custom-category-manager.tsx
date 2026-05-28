@@ -36,7 +36,7 @@ const COLOR_OPTIONS = AVAILABLE_COLORS.map((colorClass, i) => ({
   colorClass: colorClass
 }));
 
-function CustomDropdown({
+function CustomDropdown<TOption extends { value: string }>({
   value,
   onChange,
   options,
@@ -47,9 +47,9 @@ function CustomDropdown({
 }: {
   value: string;
   onChange: (v: string) => void;
-  options: any[];
-  renderOption: (opt: any) => React.ReactNode;
-  renderValue: (opt: any) => React.ReactNode;
+  options: TOption[];
+  renderOption: (opt: TOption) => React.ReactNode;
+  renderValue: (opt: TOption) => React.ReactNode;
   className?: string;
   placement?: "top" | "bottom";
 }) {
@@ -350,4 +350,3 @@ export function CustomCategoryManager({ categories }: CategoryProps) {
     </div>
   );
 }
-

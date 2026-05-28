@@ -1,27 +1,33 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { requireCurrentUserId } from "@/lib/auth";
+import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
 export type RoastLevel = "MILD" | "MEDIUM" | "NUCLEAR";
 
-export async function setRoastLevel(level: RoastLevel): Promise<{ success: boolean; message: string }> {
-  const userId = await requireCurrentUserId();
+const monthFormatter = new Intl.DateTimeFormat("id-ID", {
+  month: "2-digit",
+  year: "numeric",
+});
 
-  const monthFormatter = new Intl.DateTimeFormat("id-ID", {
-    month: "2-digit",
-    year: "numeric",
-  });
+export async function setRoastLevel(level: RoastLevel): Promise<{ success: boolean; message: string }> {
+  const userId = await auth();
+
   const monthKey = monthFormatter.format(new Date());
 
   try {
+    const existing = await prisma.monthlyBudget.findUnique({
+      where: { userId_month: { userId, month: monthKey } },
+      select: { roastLevel: true },
+    });
+    const shouldRegenerateRoast = existing?.roastLevel !== level;
+
     await prisma.monthlyBudget.upsert({
       where: { userId_month: { userId, month: monthKey } },
       update: {
         roastLevel: level,
-        // Invalidate cached roast so it's regenerated with the new tone
-        latestRoast: null,
+        ...(shouldRegenerateRoast ? { latestRoast: null } : {}),
       },
       create: {
         userId,

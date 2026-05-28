@@ -24,8 +24,8 @@ export default async function LoginPage({
 
       {/* Floating Ambient Glow Orbs */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute -top-[10%] left-[20%] w-[350px] h-[350px] bg-emerald-100/40 rounded-full blur-[100px] animate-pulse duration-[6000ms]" />
-        <div className="absolute bottom-[10%] right-[15%] w-[400px] h-[400px] bg-rose-100/30 rounded-full blur-[120px] animate-pulse duration-[8000ms]" />
+        <div className="absolute -top-[10%] left-[20%] size-[350px] bg-emerald-100/40 rounded-full blur-[100px] animate-pulse duration-[6000ms]" />
+        <div className="absolute bottom-[10%] right-[15%] size-[400px] bg-rose-100/30 rounded-full blur-[120px] animate-pulse duration-[8000ms]" />
       </div>
 
       {/* Floating 'Back to Home' Button */}
@@ -33,7 +33,7 @@ export default async function LoginPage({
         href="/"
         className="absolute top-6 left-6 inline-flex items-center gap-2 px-4 py-2 rounded-full border border-slate-200/50 bg-white/70 backdrop-blur-md text-sm font-medium text-slate-600 hover:text-emerald-600 hover:bg-white shadow-sm transition-all duration-300 z-50"
       >
-        <ArrowLeft className="w-4 h-4" />
+        <ArrowLeft className="size-4" />
         Kembali ke Beranda
       </Link>
 

@@ -4,7 +4,7 @@ export default function ExpenseDetailLoading() {
   return (
     <div className="mx-auto max-w-md px-4 py-6 pb-32 animate-pulse">
       <div className="mb-6 flex items-center gap-2">
-        <ArrowLeft className="h-4 w-4 text-slate-300" />
+        <ArrowLeft className="size-4 text-slate-300" />
         <div className="h-3 w-32 bg-slate-200 rounded-full" />
       </div>
 
@@ -19,7 +19,7 @@ export default function ExpenseDetailLoading() {
             <div className="h-9 w-36 bg-slate-200 rounded-full" />
             <div className="h-3 w-28 bg-slate-200 rounded-full" />
           </div>
-          <div className="h-12 w-12 bg-slate-100 rounded-2xl" />
+          <div className="size-12 bg-slate-100 rounded-2xl" />
         </div>
         <div className="h-14 bg-amber-50 rounded-xl" />
       </div>

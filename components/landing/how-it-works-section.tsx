@@ -10,7 +10,7 @@ export function HowItWorksSection() {
       num: "01",
       title: "Set Budget Bulanan",
       desc: "Tentukan batas pengeluaran jajanmu bulan ini di dasbor dalam hitungan detik.",
-      icon: <Sliders className="w-5 h-5" />,
+      icon: <Sliders className="size-5" />,
       widget: (
         <div className="w-full mt-6 bg-slate-50 rounded-xl p-4">
           <div className="flex justify-between items-center mb-2">
@@ -32,7 +32,7 @@ export function HowItWorksSection() {
       num: "02",
       title: "Jepret / Scan Struk",
       desc: "Foto struk belanja pas nongkrong, biarkan AI membaca nominalnya secara instan.",
-      icon: <Scan className="w-5 h-5" />,
+      icon: <Scan className="size-5" />,
       widget: (
         <div className="w-full mt-6 bg-slate-50 rounded-xl p-4 relative overflow-hidden">
           {/* Simulated Scanner Viewport */}
@@ -40,7 +40,7 @@ export function HowItWorksSection() {
             {/* Pulsing Scan Laser Line */}
             <div className="absolute left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-amber-400 to-transparent top-1/2 -translate-y-1/2 animate-bounce pointer-events-none" />
             <div className="text-[10px] text-amber-600 font-bold tracking-wider mb-1">
-              Scanning...
+              Scanning…
             </div>
             <div className="text-xs text-slate-700 font-bold">
               Sedap Rasa Cafe
@@ -56,7 +56,7 @@ export function HowItWorksSection() {
       num: "03",
       title: "Split / Simpan Instan",
       desc: "Bagi tagihan bareng temen secara adil atau langsung masukan ke riwayat.",
-      icon: <UserCheck className="w-5 h-5" />,
+      icon: <UserCheck className="size-5" />,
       widget: (
         <div className="w-full mt-6 bg-slate-50 rounded-xl p-4">
           <div className="text-[10px] text-slate-500 font-semibold mb-2">Bagi Tagihan</div>
@@ -81,7 +81,7 @@ export function HowItWorksSection() {
       num: "04",
       title: "Baca AI Roast",
       desc: "Tahan mental membaca ejekan finansial kami biar makin hemat dan tersadar.",
-      icon: <Flame className="w-5 h-5" />,
+      icon: <Flame className="size-5" />,
       widget: (
         <div className="w-full mt-6 bg-slate-50 rounded-xl p-4 relative overflow-hidden">
           <div className="flex justify-between items-center mb-1.5">
@@ -119,7 +119,7 @@ export function HowItWorksSection() {
           <div className="hidden lg:block absolute top-[60px] left-[15%] right-[15%] h-[1px] bg-gradient-to-r from-emerald-100 via-amber-100 to-rose-100 -z-10" />
 
           {steps.map((step, i) => (
-            <RevealSection key={i} delay={i * 100}>
+            <RevealSection key={step.title} delay={i * 100}>
               {/* Minimalist Flat Card */}
               <div className="bg-white border border-slate-100 hover:border-slate-200 rounded-2xl p-6 relative flex flex-col justify-between items-start text-left group transition-colors duration-300 h-full min-h-[320px]">
                 <div className="w-full">

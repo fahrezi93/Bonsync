@@ -26,9 +26,9 @@ export function RevealSection({
 
     if (!("IntersectionObserver" in window)) {
       // Browser tidak support — langsung tampilkan
-      setTimeout(() => setInView(true), 0);
+      const showTimer = setTimeout(() => setInView(true), 0);
       clearTimeout(fallbackTimer);
-      return;
+      return () => clearTimeout(showTimer);
     }
 
     const observer = new IntersectionObserver(
@@ -42,7 +42,10 @@ export function RevealSection({
       { threshold: 0.05 }
     );
     observer.observe(el);
-    return () => observer.disconnect();
+    return () => {
+      clearTimeout(fallbackTimer);
+      observer.disconnect();
+    };
   }, []);
 
   return (

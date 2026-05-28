@@ -19,11 +19,13 @@ interface EditExpenseDialogProps {
   customCategories?: Array<{ id: string; name: string }>;
 }
 
-export function EditExpenseDialog({ expense, trigger, customCategories = [] }: EditExpenseDialogProps) {
+const EMPTY_CUSTOM_CATEGORIES: Array<{ id: string; name: string }> = [];
+
+export function EditExpenseDialog({ expense, trigger, customCategories = EMPTY_CUSTOM_CATEGORIES }: EditExpenseDialogProps) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState("");
-  const router = useRouter();
+  const { refresh } = useRouter();
 
   async function onSubmit(formData: FormData) {
     setError("");
@@ -41,7 +43,7 @@ export function EditExpenseDialog({ expense, trigger, customCategories = [] }: E
 
       if (res.success) {
         setOpen(false);
-        router.refresh();
+        refresh();
       } else {
         setError(res.message);
       }
@@ -57,7 +59,7 @@ export function EditExpenseDialog({ expense, trigger, customCategories = [] }: E
             title="Edit pengeluaran"
             className="shrink-0 rounded-full p-2 text-slate-300 opacity-0 group-hover:opacity-100 hover:bg-slate-100 hover:text-slate-600 transition-all focus:opacity-100 cursor-pointer"
           >
-            <Edit3 className="h-4 w-4" />
+            <Edit3 className="size-4" />
           </button>
         )}
       </Dialog.Trigger>
@@ -79,8 +81,11 @@ export function EditExpenseDialog({ expense, trigger, customCategories = [] }: E
             )}
             
             <div className="space-y-2">
-              <label className="text-[13px] font-bold text-slate-700">Nominal (Rp)</label>
+              <label htmlFor="edit-expense-amount" className="text-[13px] font-bold text-slate-700">
+                Nominal (Rp)
+              </label>
               <CurrencyInput
+                id="edit-expense-amount"
                 name="amount"
                 defaultValue={expense.totalAmount}
                 required
@@ -88,19 +93,26 @@ export function EditExpenseDialog({ expense, trigger, customCategories = [] }: E
             </div>
 
             <div className="space-y-2">
-              <label className="text-[13px] font-bold text-slate-700">Deskripsi</label>
+              <label htmlFor="edit-expense-description" className="text-[13px] font-bold text-slate-700">
+                Deskripsi
+              </label>
               <input
+                id="edit-expense-description"
                 type="text"
                 name="description"
                 defaultValue={expense.description || ""}
                 required
+                aria-label="Deskripsi"
                 className="w-full rounded-xl border border-slate-200/60 bg-slate-50/50 px-4 py-3 text-[13px] font-semibold text-slate-800 placeholder:text-slate-400 focus:border-slate-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-slate-100 transition-all shadow-sm"
               />
             </div>
 
             <div className="space-y-2 relative">
-              <label className="text-[13px] font-bold text-slate-700">Kategori</label>
+              <label htmlFor="edit-expense-category" className="text-[13px] font-bold text-slate-700">
+                Kategori
+              </label>
               <select
+                id="edit-expense-category"
                 name="category"
                 defaultValue={expense.category}
                 required
@@ -139,7 +151,7 @@ export function EditExpenseDialog({ expense, trigger, customCategories = [] }: E
                 disabled={isPending}
                 className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-[13px] font-bold text-white bg-slate-900 hover:bg-slate-800 transition-colors disabled:opacity-70 disabled:cursor-not-allowed min-w-[140px]"
               >
-                {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                {isPending ? <Loader2 className="size-4 animate-spin" /> : null}
                 {isPending ? "Menyimpan..." : "Simpan"}
               </button>
             </div>
@@ -147,10 +159,11 @@ export function EditExpenseDialog({ expense, trigger, customCategories = [] }: E
 
           <Dialog.Close asChild>
             <button
-              className="absolute top-5 right-5 h-8 w-8 inline-flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors focus:outline-none"
+              type="button"
+              className="absolute top-5 right-5 size-8 inline-flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors focus:outline-none"
               aria-label="Tutup"
             >
-              <X className="h-4 w-4" />
+              <X className="size-4" />
             </button>
           </Dialog.Close>
         </Dialog.Content>

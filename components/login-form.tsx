@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState, useState, useEffect, useTransition, useRef } from "react";
-import { Loader2, Mail, Lock, Eye, EyeOff, CheckCircle, RefreshCw } from "lucide-react";
+
+import { Loader2, Mail, Lock, Eye, EyeOff, CheckCircle, RefreshCw, MailOpen, ArrowRight, HelpCircle } from "lucide-react";
 import {
   signIn,
   signUp,
@@ -17,15 +18,35 @@ interface LoginFormProps {
   defaultEmail?: string;
 }
 
-/** Ambil site URL yang benar — prioritaskan env var, fallback ke window.location.origin */
-function getSiteUrl(): string {
-  if (process.env.NEXT_PUBLIC_SITE_URL) {
-    return process.env.NEXT_PUBLIC_SITE_URL.replace(/\/+$/, "");
-  }
-  if (typeof window !== "undefined") {
-    return window.location.origin;
-  }
-  return "http://localhost:3000";
+interface GoogleCredentialResponse {
+  credential: string;
+}
+
+interface GoogleIdentityServices {
+  accounts: {
+    id: {
+      initialize: (options: {
+        client_id: string;
+        ux_mode: "popup";
+        callback: (response: GoogleCredentialResponse) => void;
+      }) => void;
+      renderButton: (
+        container: HTMLElement,
+        options: {
+          theme: "outline";
+          size: "large";
+          shape: "pill";
+          width: number;
+          text: "continue_with";
+          locale: "id";
+        },
+      ) => void;
+    };
+  };
+}
+
+function getGoogleIdentityServices() {
+  return (window as Window & { google?: GoogleIdentityServices }).google;
 }
 
 export function LoginForm({ next, defaultEmail }: LoginFormProps) {
@@ -37,12 +58,8 @@ export function LoginForm({ next, defaultEmail }: LoginFormProps) {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [googlePending, startGoogleTransition] = useTransition();
   const [googleError, setGoogleError] = useState<string | null>(null);
-  const [mounted, setMounted] = useState(false);
+  const [googleSdkLoaded, setGoogleSdkLoaded] = useState(false);
   const googleInitRef = useRef(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
 
   const [loginState, loginAction, loginPending] = useActionState(
@@ -63,12 +80,11 @@ export function LoginForm({ next, defaultEmail }: LoginFormProps) {
   const action = mode === "login" ? loginAction : registerAction;
 
   // Reset password saja saat ada error — email tetap dipertahankan
-  useEffect(() => {
-    if (state.error) {
-      setPassword("");
-      setConfirmPassword("");
-    }
-  }, [state.error]);
+  function submitAuthAction(formData: FormData) {
+    setPassword("");
+    setConfirmPassword("");
+    action(formData);
+  }
 
   // Tampilkan tombol resend jika error berisi "belum dikonfirmasi"
   const showResendButton =
@@ -82,7 +98,7 @@ export function LoginForm({ next, defaultEmail }: LoginFormProps) {
     const initGoogleSignIn = () => {
       if (googleInitRef.current) return;
 
-      const google = (window as any).google;
+      const google = getGoogleIdentityServices();
       if (!google) return;
 
       googleInitRef.current = true;
@@ -96,7 +112,7 @@ export function LoginForm({ next, defaultEmail }: LoginFormProps) {
         google.accounts.id.initialize({
           client_id: clientId,
           ux_mode: "popup",
-          callback: async (response: any) => {
+          callback: async (response) => {
             setGoogleError(null);
             startGoogleTransition(async () => {
               try {
@@ -131,6 +147,7 @@ export function LoginForm({ next, defaultEmail }: LoginFormProps) {
             text: "continue_with",
             locale: "id",
           });
+          setGoogleSdkLoaded(true);
         }
       } catch (err) {
         console.error("Gagal menginisialisasi Google Sign-In:", err);
@@ -149,7 +166,7 @@ export function LoginForm({ next, defaultEmail }: LoginFormProps) {
       script.defer = true;
       script.onload = initGoogleSignIn;
       document.head.appendChild(script);
-    } else if ((window as any).google) {
+    } else if (getGoogleIdentityServices()) {
       initGoogleSignIn();
     }
   }, [next]);
@@ -159,7 +176,7 @@ export function LoginForm({ next, defaultEmail }: LoginFormProps) {
     <div className="bg-white/80 backdrop-blur-xl border border-slate-200/60 rounded-[32px] p-8 shadow-[0_20px_50px_rgba(0,0,0,0.02)] space-y-6 relative overflow-hidden">
       
       {/* Ambient decorative spot inside card */}
-      <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-100/20 rounded-full blur-xl pointer-events-none -z-10" />
+      <div className="absolute top-0 right-0 size-24 bg-emerald-100/20 rounded-full blur-xl pointer-events-none -z-10" />
 
       {/* Tab switcher */}
       <div className="flex rounded-full border border-slate-200/60 bg-slate-100/50 p-1 backdrop-blur-sm select-none">
@@ -169,10 +186,10 @@ export function LoginForm({ next, defaultEmail }: LoginFormProps) {
             setMode("login");
             setShowResend(false);
           }}
-          className={`flex-1 rounded-full py-2.5 text-sm font-semibold transition-all duration-300 cursor-pointer ${
+          className={`flex-1 outline-none focus:outline-none focus:ring-0 tap-highlight-transparent rounded-full py-2.5 text-sm font-semibold transition-all duration-300 cursor-pointer ${
             mode === "login"
               ? "bg-white text-emerald-600 shadow-sm border border-slate-200/30"
-              : "text-slate-500 hover:text-slate-800"
+              : "text-slate-500 hover:text-slate-800 border border-transparent"
           }`}
         >
           Masuk
@@ -183,10 +200,10 @@ export function LoginForm({ next, defaultEmail }: LoginFormProps) {
             setMode("register");
             setShowResend(false);
           }}
-          className={`flex-1 rounded-full py-2.5 text-sm font-semibold transition-all duration-300 cursor-pointer ${
+          className={`flex-1 outline-none focus:outline-none focus:ring-0 tap-highlight-transparent rounded-full py-2.5 text-sm font-semibold transition-all duration-300 cursor-pointer ${
             mode === "register"
               ? "bg-white text-emerald-600 shadow-sm border border-slate-200/30"
-              : "text-slate-500 hover:text-slate-800"
+              : "text-slate-500 hover:text-slate-800 border border-transparent"
           }`}
         >
           Daftar
@@ -195,38 +212,34 @@ export function LoginForm({ next, defaultEmail }: LoginFormProps) {
 
       {/* Success state (register) */}
       {registerState.success && mode === "register" ? (
-        <div className="flex flex-col items-center gap-5 py-6 text-center animate-fade-in-up">
-          {/* Elegant Icon with pulse effect */}
-          <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50 border border-emerald-100 shadow-sm shadow-emerald-500/10">
-            <span className="absolute inline-flex h-full w-full rounded-2xl bg-emerald-400 opacity-20 animate-ping duration-1000"></span>
-            <CheckCircle className="h-8 w-8 text-emerald-500 relative z-10" />
-          </div>
-          
+        <div className="flex flex-col items-center gap-6 py-6 text-center animate-fade-in-up">
           <div className="space-y-2">
-            <h2 className="text-lg font-black text-[#21164c] tracking-tight">Email Konfirmasi Dikirim!</h2>
-            <p className="text-xs text-[#353241]/80 font-medium leading-relaxed px-2">
+            <h2 className="text-xl font-bold text-slate-800 tracking-tight font-sora">
+              Email Konfirmasi Dikirim!
+            </h2>
+            <p className="text-xs text-slate-500 leading-relaxed px-4 font-inter">
               {registerState.success}
             </p>
           </div>
 
-          {/* Cozy and Premium Alert Box */}
-          <div className="w-full rounded-[20px] border border-slate-150 bg-slate-50/80 p-4.5 text-left space-y-2.5 shadow-none">
-            <div className="flex items-center gap-2 font-bold text-slate-800 text-[11px] font-mono uppercase tracking-wider">
-              <span className="flex h-5 w-5 items-center justify-center rounded-md bg-amber-50 text-amber-600 border border-amber-100 text-[10px]">⚠️</span>
-              <span>Belum Menerima Email?</span>
+          {/* Integrated Modern Help Block */}
+          <div className="w-full rounded-2xl border border-slate-100 bg-slate-50/40 backdrop-blur-sm p-5 text-left space-y-3">
+            <div className="flex items-center gap-2 font-bold text-slate-700 text-xs tracking-wide">
+              <HelpCircle className="size-4 text-emerald-500" />
+              <span className="font-sora font-semibold">Belum Menerima Email?</span>
             </div>
-            <ul className="space-y-2 text-[11px] font-semibold text-[#353241]/75 leading-relaxed">
-              <li className="flex items-start gap-2">
-                <span className="mt-1.5 flex h-1.5 w-1.5 shrink-0 rounded-full bg-slate-400"></span>
-                <span>Periksa folder <strong>Spam</strong> atau <strong>Promosi</strong> di email kamu.</span>
+            <ul className="space-y-2.5 text-xs text-slate-500 leading-relaxed font-inter">
+              <li className="flex items-start gap-2.5">
+                <span className="mt-1.5 flex size-1.5 shrink-0 rounded-full bg-emerald-500"></span>
+                <span>Periksa folder <strong className="text-slate-700 font-semibold">Spam</strong> atau <strong className="text-slate-700 font-semibold">Promosi</strong> di kotak masuk Anda.</span>
               </li>
-              <li className="flex items-start gap-2">
-                <span className="mt-1.5 flex h-1.5 w-1.5 shrink-0 rounded-full bg-slate-400"></span>
-                <span>Tunggu 1-2 menit hingga proses pengiriman selesai.</span>
+              <li className="flex items-start gap-2.5">
+                <span className="mt-1.5 flex size-1.5 shrink-0 rounded-full bg-emerald-500"></span>
+                <span>Tunggu sekitar 1-2 menit hingga proses pengiriman selesai sepenuhnya.</span>
               </li>
-              <li className="flex items-start gap-2">
-                <span className="mt-1.5 flex h-1.5 w-1.5 shrink-0 rounded-full bg-slate-400"></span>
-                <span>Pastikan penulisan alamat email sudah benar.</span>
+              <li className="flex items-start gap-2.5">
+                <span className="mt-1.5 flex size-1.5 shrink-0 rounded-full bg-emerald-500"></span>
+                <span>Pastikan penulisan alamat email Anda sudah benar dan aktif.</span>
               </li>
             </ul>
           </div>
@@ -234,14 +247,14 @@ export function LoginForm({ next, defaultEmail }: LoginFormProps) {
           <button
             type="button"
             onClick={() => setMode("login")}
-            className="w-full mt-2 flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white py-3.5 text-xs font-extrabold text-[#21164c] tracking-wider uppercase font-mono hover:bg-slate-50 shadow-sm active:scale-98 transition-all duration-300 cursor-pointer"
+            className="w-full mt-3 flex items-center justify-center gap-2 rounded-2xl bg-slate-900 py-3.5 text-sm font-semibold text-white hover:bg-slate-800 active:scale-98 transition-all duration-300 shadow-md shadow-slate-900/10 cursor-pointer"
           >
-            Kembali ke Login
+            <span>Kembali ke Halaman Login</span>
           </button>
         </div>
       ) : (
         <>
-          <form action={action} className="space-y-5">
+          <form action={submitAuthAction} className="space-y-5">
             {/* Hidden next param */}
             <input type="hidden" name="next" value={next} />
 
@@ -254,7 +267,7 @@ export function LoginForm({ next, defaultEmail }: LoginFormProps) {
                 Alamat Email
               </label>
               <div className="relative group">
-                <Mail className="absolute left-3.5 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors duration-300" />
+                <Mail className="absolute left-3.5 top-1/2 size-4.5 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors duration-300" />
                 <input
                   id="email"
                   name="email"
@@ -278,7 +291,7 @@ export function LoginForm({ next, defaultEmail }: LoginFormProps) {
                 Kata Sandi
               </label>
               <div className="relative group">
-                <Lock className="absolute left-3.5 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors duration-300" />
+                <Lock className="absolute left-3.5 top-1/2 size-4.5 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors duration-300" />
                 <input
                   id="password"
                   name="password"
@@ -298,9 +311,9 @@ export function LoginForm({ next, defaultEmail }: LoginFormProps) {
                   aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
                 >
                   {showPassword ? (
-                    <EyeOff className="h-4 w-4" />
+                    <EyeOff className="size-4" />
                   ) : (
-                    <Eye className="h-4 w-4" />
+                    <Eye className="size-4" />
                   )}
                 </button>
               </div>
@@ -316,7 +329,7 @@ export function LoginForm({ next, defaultEmail }: LoginFormProps) {
                   Konfirmasi Kata Sandi
                 </label>
                 <div className="relative group">
-                  <Lock className="absolute left-3.5 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors duration-300" />
+                  <Lock className="absolute left-3.5 top-1/2 size-4.5 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors duration-300" />
                   <input
                     id="confirmPassword"
                     name="confirmPassword"
@@ -347,10 +360,10 @@ export function LoginForm({ next, defaultEmail }: LoginFormProps) {
               className="w-full flex items-center justify-center gap-2 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3.5 text-sm shadow-sm hover:-translate-y-0.5 active:scale-95 disabled:opacity-60 transition-all duration-300 cursor-pointer"
             >
               {pending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="size-4 animate-spin" />
               ) : null}
               {pending
-                ? "Memproses..."
+                ? "Memproses…"
                 : mode === "login"
                   ? "Masuk"
                   : "Buat Akun"}
@@ -371,14 +384,22 @@ export function LoginForm({ next, defaultEmail }: LoginFormProps) {
               disabled
               className="w-full flex items-center justify-center gap-3 rounded-full border border-slate-200 bg-white py-3.5 text-sm font-semibold text-slate-700 shadow-sm"
             >
-              <Loader2 className="h-4 w-4 animate-spin text-emerald-500" />
-              Menghubungkan ke Google...
+              <Loader2 className="size-4 animate-spin text-emerald-500" />
+              Menghubungkan ke Google…
             </button>
           ) : (
-            <div
-              id="google-signin-container"
-              className="w-full flex justify-center [&>div]:!w-full [&_iframe]:!w-full [&_iframe]:!max-w-none"
-            />
+            <div className="relative w-full flex justify-center min-h-[48px]">
+              {!googleSdkLoaded && (
+                <div className="absolute inset-0 flex items-center justify-center gap-3 rounded-full border border-slate-200 bg-slate-50/50 py-3 text-sm font-semibold text-slate-400">
+                  <Loader2 className="size-4 animate-spin text-slate-400" />
+                  Memuat Google…
+                </div>
+              )}
+              <div
+                id="google-signin-container"
+                className={`w-full flex justify-center ${!googleSdkLoaded ? "opacity-0" : "opacity-100 transition-opacity duration-300"}`}
+              />
+            </div>
           )}
 
           {/* Google error */}
@@ -395,7 +416,7 @@ export function LoginForm({ next, defaultEmail }: LoginFormProps) {
               onClick={() => setShowResend(true)}
               className="w-full flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-slate-50 py-3 text-xs font-bold text-slate-650 hover:bg-slate-100 hover:text-slate-800 transition-all duration-300 cursor-pointer"
             >
-              <RefreshCw className="h-3.5 w-3.5" />
+              <RefreshCw className="size-3.5" />
               Kirim ulang email konfirmasi
             </button>
           )}
@@ -420,7 +441,7 @@ export function LoginForm({ next, defaultEmail }: LoginFormProps) {
                   disabled={resendPending}
                   className="flex items-center gap-1.5 rounded-[12px] bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-600 hover:shadow-md disabled:opacity-60 transition-all duration-300 cursor-pointer"
                 >
-                  {resendPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+                  {resendPending ? <Loader2 className="size-3.5 animate-spin" /> : null}
                   Kirim
                 </button>
               </form>

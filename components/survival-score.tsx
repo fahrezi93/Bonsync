@@ -16,7 +16,7 @@ export function SurvivalScore({ score }: SurvivalScoreProps) {
   const gradientId = danger ? "roseGrad" : warning ? "amberGrad" : "emeraldGrad";
 
   return (
-    <div className="flex flex-col items-center justify-center w-full h-full gap-3.5 relative">
+    <div className="flex flex-col items-center justify-center w-full h-full relative">
       <div className={`relative flex items-center justify-center w-24 h-24 rounded-full bg-white border border-slate-100 shadow-sm transition-all duration-300`}>
         <svg width="88" height="88" viewBox="0 0 88 88" className="shrink-0 -rotate-90">
           <defs>
@@ -75,15 +75,12 @@ export function SurvivalScore({ score }: SurvivalScoreProps) {
 
         {/* Centered score text */}
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-           <span className="text-[24px] font-black text-slate-800 tracking-tight leading-none">
+           <span className="text-[24px] font-bold text-slate-800 tracking-tight leading-none font-sora">
              {Math.round(clamped)}
            </span>
-           <span className="text-[10px] font-medium text-slate-400 mt-0.5 tracking-wider">hp</span>
+           <span className="text-[10px] font-medium text-slate-400 mt-0.5 tracking-wider font-mono">hp</span>
         </div>
       </div>
-      <p className={`text-[11px] font-bold text-center ${danger ? "text-rose-600 animate-pulse" : warning ? "text-amber-600" : "text-emerald-700"}`}>
-        Survival Score
-      </p>
     </div>
   );
 }

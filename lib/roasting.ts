@@ -25,6 +25,51 @@ import { generateContentWithFallback } from "@/lib/ai-fallback";
 export type RoastLevel = "MILD" | "MEDIUM" | "NUCLEAR";
 export type RoastPersona = "DEFAULT" | "MAMA" | "SULTAN" | "TETANGGA" | "DOSEN";
 
+const MAX_ROAST_SENTENCES = 2;
+const MAX_ROAST_CHARS = 220;
+const NUMBER_WORD_REPLACEMENTS: Array<[RegExp, string]> = [
+  [/\bdua puluh satu ribu\b/gi, "Rp 21.000"],
+  [/\bseratus ribu\b/gi, "Rp 100.000"],
+  [/\bdua ratus ribu\b/gi, "Rp 200.000"],
+  [/\btiga ratus ribu\b/gi, "Rp 300.000"],
+  [/\bempat ratus ribu\b/gi, "Rp 400.000"],
+  [/\blima ratus ribu\b/gi, "Rp 500.000"],
+  [/\benam ratus ribu\b/gi, "Rp 600.000"],
+  [/\btujuh ratus ribu\b/gi, "Rp 700.000"],
+  [/\bdelapan ratus ribu\b/gi, "Rp 800.000"],
+  [/\bsembilan ratus ribu\b/gi, "Rp 900.000"],
+  [/\bsatu juta\b/gi, "Rp 1.000.000"],
+  [/\bdua juta\b/gi, "Rp 2.000.000"],
+  [/\btiga juta\b/gi, "Rp 3.000.000"],
+  [/\bempat juta\b/gi, "Rp 4.000.000"],
+  [/\blima juta\b/gi, "Rp 5.000.000"],
+];
+
+function truncateAtWord(value: string, maxLength: number) {
+  if (value.length <= maxLength) return value;
+
+  const trimmed = value.slice(0, maxLength).trimEnd();
+  const lastSpace = trimmed.lastIndexOf(" ");
+  return `${trimmed.slice(0, lastSpace > 120 ? lastSpace : maxLength).trimEnd()}...`;
+}
+
+export function normalizeRoastText(raw: string) {
+  let compact = raw
+    .replace(/\s+/g, " ")
+    .replace(/^["'“”]+|["'“”]+$/g, "")
+    .trim();
+
+  if (!compact) return compact;
+
+  for (const [pattern, replacement] of NUMBER_WORD_REPLACEMENTS) {
+    compact = compact.replace(pattern, replacement);
+  }
+
+  const sentences = compact.match(/[^.!?。！？]+[.!?。！？]*/g) ?? [compact];
+  const shortText = sentences.slice(0, MAX_ROAST_SENTENCES).join(" ").trim();
+  return truncateAtWord(shortText, MAX_ROAST_CHARS);
+}
+
 async function buildExpenseSummary(userId: string, monthKey: string): Promise<string> {
   const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
   const [budget, expenses] = await Promise.all([
@@ -123,7 +168,11 @@ export function buildRoastPrompt(
   level: RoastLevel,
   persona: RoastPersona = "DEFAULT",
 ): string {
-  const baseData = `Data keuangan user:\n${summary}`;
+  const baseData =
+    `ATURAN OUTPUT: maksimal 2 kalimat pendek, maksimal 35 kata total. ` +
+    `Semua nominal uang WAJIB ditulis dengan angka format Rupiah, contoh "Rp 100.000", bukan "seratus ribu". ` +
+    `Jangan pakai judul, bullet, markdown, atau tanda kutip.\n\n` +
+    `Data keuangan user:\n${summary}`;
   const personaInfo = ROAST_PERSONAS[persona];
 
   const personaIntro =
@@ -197,7 +246,7 @@ export const getMonthlyRoasting = cache(
 
       if (budget?.latestRoast) {
         // Cache hit → return langsung tanpa panggil AI sama sekali
-        return { text: budget.latestRoast, level: currentLevel, persona: currentPersona };
+        return { text: normalizeRoastText(budget.latestRoast), level: currentLevel, persona: currentPersona };
       }
     } catch {
       // Gagal baca DB → lanjut ke generate
@@ -227,7 +276,7 @@ export const getMonthlyRoasting = cache(
         config: {},
         contents: [{ role: "user", parts: [{ text: prompt }] }],
       });
-      const roast = res.text.trim();
+      const roast = normalizeRoastText(res.text);
 
       // Simpan ke DB supaya request berikutnya tidak generate ulang
       try {

@@ -1,18 +1,9 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { requireCurrentUserId } from "@/lib/auth";
+import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
-
-const PREDEFINED_CATEGORY_NAMES = [
-  "FOOD",
-  "TRANSPORT",
-  "LIFESTYLE",
-  "HEALTH",
-  "ENTERTAINMENT",
-  "OTHERS",
-];
 
 type CategoryActionResult = {
   success: boolean;
@@ -24,8 +15,22 @@ function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Unknown error";
 }
 
+function isPredefinedCategoryName(name: string) {
+  switch (name) {
+    case "FOOD":
+    case "TRANSPORT":
+    case "LIFESTYLE":
+    case "HEALTH":
+    case "ENTERTAINMENT":
+    case "OTHERS":
+      return true;
+    default:
+      return false;
+  }
+}
+
 export async function getUserCategories() {
-  const userId = await requireCurrentUserId();
+  const userId = await auth();
   const categories = await prisma.category.findMany({
     where: { userId },
     orderBy: { createdAt: "asc" },
@@ -38,14 +43,14 @@ export async function addCategory(
   color?: string,
   icon?: string,
 ): Promise<CategoryActionResult> {
-  const userId = await requireCurrentUserId();
+  const userId = await auth();
   const trimmedName = name.trim();
   
   if (!trimmedName) {
     return { success: false, message: "Nama kategori tidak boleh kosong." };
   }
 
-  if (PREDEFINED_CATEGORY_NAMES.includes(trimmedName.toUpperCase())) {
+  if (isPredefinedCategoryName(trimmedName.toUpperCase())) {
     return { success: false, message: "Nama kategori ini sudah digunakan oleh sistem." };
   }
 
@@ -71,7 +76,7 @@ export async function addCategory(
 }
 
 export async function deleteCategory(id: string): Promise<{ success: boolean; message: string }> {
-  const userId = await requireCurrentUserId();
+  const userId = await auth();
   
   try {
     const category = await prisma.category.findFirst({
@@ -112,13 +117,13 @@ export async function updateCategory(
   color?: string,
   icon?: string,
 ): Promise<CategoryActionResult> {
-  const userId = await requireCurrentUserId();
+  const userId = await auth();
   const trimmedName = name.trim();
 
   if (!trimmedName) {
     return { success: false, message: "Nama kategori tidak boleh kosong." };
   }
-  if (PREDEFINED_CATEGORY_NAMES.includes(trimmedName.toUpperCase())) {
+  if (isPredefinedCategoryName(trimmedName.toUpperCase())) {
     return { success: false, message: "Nama kategori ini sudah digunakan oleh sistem." };
   }
 

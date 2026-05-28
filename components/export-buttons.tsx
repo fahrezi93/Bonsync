@@ -14,7 +14,7 @@ interface ExportButtonProps {
 function ExportButton({ href, label, loadingLabel, variant, icon }: ExportButtonProps) {
   const [loading, setLoading] = useState(false);
 
-  const handleClick = () => {
+  const handleDownloadStart = () => {
     setLoading(true);
     // Reset setelah 5 detik (download biasanya selesai dalam waktu itu)
     setTimeout(() => setLoading(false), 5000);
@@ -33,14 +33,14 @@ function ExportButton({ href, label, loadingLabel, variant, icon }: ExportButton
   return (
     <a
       href={loading ? undefined : href}
-      onClick={handleClick}
+      onClick={handleDownloadStart}
       aria-disabled={loading}
       className={`${baseClass} ${variantClass} ${loading ? "pointer-events-none" : ""}`}
     >
       {loading ? (
-        <Loader2 className="h-4 w-4 animate-spin" />
+        <Loader2 className="size-4 animate-spin" />
       ) : (
-        <Icon className="h-4 w-4" />
+        <Icon className="size-4" />
       )}
       {loading ? loadingLabel : label}
     </a>
