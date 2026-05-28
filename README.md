@@ -8,7 +8,7 @@ Banyak orang sadar uangnya cepat habis, tetapi tidak punya catatan yang jelas te
 
 ## Live Demo
 
-Live app: [bonsync-app.run.app](https://your-live-url.run.app)
+Live app: [BonSync-App](https://bonsync-app-zpbtqndl4q-et.a.run.app)
 
 ## Key Features
 

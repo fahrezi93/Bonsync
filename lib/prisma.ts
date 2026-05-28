@@ -16,10 +16,16 @@ function createPrismaClient(): PrismaClient {
     return new PrismaClient({ log: ["error"] });
   }
 
+  const databaseUrl = new URL(connectionString);
+  databaseUrl.searchParams.delete("sslmode");
+  databaseUrl.searchParams.delete("sslcert");
+  databaseUrl.searchParams.delete("sslkey");
+  databaseUrl.searchParams.delete("sslrootcert");
+
   // Supabase pooler pakai self-signed certificate.
   // Force rejectUnauthorized: false di level pg.Pool config.
   const pool = new Pool({
-    connectionString,
+    connectionString: databaseUrl.toString(),
     ssl: {
       rejectUnauthorized: false,
     },
