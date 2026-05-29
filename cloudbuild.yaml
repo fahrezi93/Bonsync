@@ -22,6 +22,8 @@ steps:
       - '--build-arg'
       - 'NEXT_PUBLIC_GOOGLE_CLIENT_ID=${_NEXT_PUBLIC_GOOGLE_CLIENT_ID}'
       - '--build-arg'
+      - 'GEMINI_API_KEY=${_GEMINI_API_KEY}'
+      - '--build-arg'
       - 'DATABASE_URL=${_DATABASE_URL}'
       - '-t'
       - 'gcr.io/$PROJECT_ID/bonsync-app:latest'

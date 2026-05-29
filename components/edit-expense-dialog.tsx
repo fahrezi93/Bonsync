@@ -57,7 +57,7 @@ export function EditExpenseDialog({ expense, trigger, customCategories = EMPTY_C
           <button 
             type="button" 
             title="Edit pengeluaran"
-            className="shrink-0 rounded-full p-2 text-slate-300 opacity-0 group-hover:opacity-100 hover:bg-slate-100 hover:text-slate-600 transition-all focus:opacity-100 cursor-pointer"
+            className="shrink-0 rounded-full p-2 text-slate-400 opacity-100 transition-all hover:bg-slate-100 hover:text-slate-600 focus:opacity-100 md:text-slate-300 md:opacity-0 md:group-hover:opacity-100 cursor-pointer"
           >
             <Edit3 className="size-4" />
           </button>

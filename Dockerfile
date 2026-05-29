@@ -42,12 +42,14 @@ ARG NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 ARG NEXT_PUBLIC_SITE_URL
 ARG NEXT_PUBLIC_GOOGLE_CLIENT_ID
 ARG DATABASE_URL
+ARG GEMINI_API_KEY
 
 ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
 ENV NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
 ENV NEXT_PUBLIC_GOOGLE_CLIENT_ID=$NEXT_PUBLIC_GOOGLE_CLIENT_ID
 ENV DATABASE_URL=$DATABASE_URL
+ENV GEMINI_API_KEY=$GEMINI_API_KEY
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
@@ -88,6 +90,15 @@ COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pg-pool ./node_modul
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pg-protocol ./node_modules/pg-protocol
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pg-types ./node_modules/pg-types
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pgpass ./node_modules/pgpass
+
+# pdfkit harus di-copy manual karena termasuk serverExternalPackages
+# (tidak di-bundle webpack), dan butuh font files + sub-dependencies di runtime
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pdfkit ./node_modules/pdfkit
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/fontkit ./node_modules/fontkit
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/linebreak ./node_modules/linebreak
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/png-js ./node_modules/png-js
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/js-md5 ./node_modules/js-md5
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@noble ./node_modules/@noble
 
 # Cloud Run injects PORT env var; default 8080
 ENV PORT=8080

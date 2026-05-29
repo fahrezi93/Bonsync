@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { deleteExpense } from "@/actions/expense-actions";
-import { Trash2, ReceiptText, ChevronRight, Receipt, ScanLine, Users } from "lucide-react";
+import { ReceiptText, ChevronRight, Receipt, ScanLine, Users } from "lucide-react";
 import { Suspense } from "react";
 import Link from "next/link";
 import { HistoryFilters } from "@/components/history-filters";
@@ -11,6 +10,8 @@ import type { Prisma } from "@prisma/client";
 import { getUserCategories } from "@/actions/category-actions";
 import { getCategoryStyle } from "@/lib/categories";
 import { ExportButtons } from "@/components/export-buttons";
+import { parseMonthRange } from "@/lib/export-filters";
+import { DeleteExpenseDialog } from "@/components/delete-expense-dialog";
 
 const idr = new Intl.NumberFormat("id-ID", {
   style: "currency",
@@ -42,14 +43,6 @@ function SourceIcon({ source }: { source: string }) {
 }
 
 const PAGE_SIZE = 12;
-
-function parseMonthRange(monthKey: string): { gte: Date; lt: Date } | null {
-  const match = monthKey.match(/^(\d{2})\/(\d{4})$/);
-  if (!match) return null;
-  const month = parseInt(match[1], 10) - 1;
-  const year = parseInt(match[2], 10);
-  return { gte: new Date(year, month, 1), lt: new Date(year, month + 1, 1) };
-}
 
 async function getHistory(params: { page: number; category: string; month: string }) {
   const userId = await requireOnboarding();
@@ -108,7 +101,7 @@ export default async function HistoryPage({
           </p>
         </div>
         <div className="hidden md:flex items-center gap-2">
-          <ExportButtons />
+          <ExportButtons month={month} category={category} />
         </div>
       </div>
 
@@ -185,7 +178,7 @@ export default async function HistoryPage({
                     </div>
 
                     {/* Edit & Hapus */}
-                    <div className="flex items-center opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-all">
+                    <div className="flex items-center opacity-100 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition-all">
                       <EditExpenseDialog 
                         expense={{
                           id: expense.id,
@@ -195,20 +188,7 @@ export default async function HistoryPage({
                         }} 
                         customCategories={customCategories}
                       />
-                      <form
-                        action={async () => {
-                          "use server";
-                          await deleteExpense(expense.id);
-                        }}
-                      >
-                        <button
-                          type="submit"
-                          title="Hapus pengeluaran"
-                          className="shrink-0 rounded-full p-2 text-slate-300 hover:bg-rose-50 hover:text-rose-500 transition-all cursor-pointer"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </form>
+                      <DeleteExpenseDialog expenseId={expense.id} expenseName={displayName} />
                     </div>
                   </div>
 
@@ -263,7 +243,7 @@ export default async function HistoryPage({
 
       {/* Export button — mobile only */}
       <div className="mt-6 md:hidden">
-        <ExportButtons className="w-full grid grid-cols-2" />
+        <ExportButtons className="w-full grid grid-cols-2 gap-2" month={month} category={category} />
       </div>
     </div>
   );

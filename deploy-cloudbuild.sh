@@ -37,6 +37,7 @@ REGION="${GCP_REGION:-asia-southeast2}"
 [[ -z "${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:-}" ]] && error "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY not set"
 [[ -z "${NEXT_PUBLIC_SITE_URL:-}" ]]             && error "NEXT_PUBLIC_SITE_URL not set"
 [[ -z "${GEMINI_API_KEY:-}" ]]                   && error "GEMINI_API_KEY not set"
+[[ -z "${NEXT_PUBLIC_GOOGLE_CLIENT_ID:-}" ]]      && error "NEXT_PUBLIC_GOOGLE_CLIENT_ID not set"
 
 # ─── Setup ────────────────────────────────────────────────────────────────────
 log "Setting GCP project: ${PROJECT_ID}"
