@@ -10,10 +10,7 @@ export interface BudgetActionState {
   submittedLimit?: number;
 }
 
-const monthFormatter = new Intl.DateTimeFormat("id-ID", {
-  month: "2-digit",
-  year: "numeric",
-});
+import { monthFormatter } from "@/lib/date-utils";
 
 const MAX_BUDGET = 1_000_000_000;
 
@@ -51,7 +48,18 @@ export async function setBudget(
       where: { userId_month: { userId, month: monthKey } },
       select: { limitAmount: true },
     });
+    
+    // Cari budget bulan sebelumnya untuk mewarisi setelan AI
+    const previousBudget = await prisma.monthlyBudget.findFirst({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      select: { roastLevel: true, roastPersona: true }
+    });
+
     const shouldRegenerateRoast = existing?.limitAmount !== limit;
+    
+    const roastLevel = previousBudget?.roastLevel ?? "MEDIUM";
+    const roastPersona = previousBudget?.roastPersona ?? "DEFAULT";
 
     await prisma.monthlyBudget.upsert({
       where: { userId_month: { userId, month: monthKey } },
@@ -59,7 +67,14 @@ export async function setBudget(
         limitAmount: limit,
         ...(shouldRegenerateRoast ? { latestRoast: null } : {}),
       },
-      create: { userId, month: monthKey, limitAmount: limit, latestRoast: null },
+      create: { 
+        userId, 
+        month: monthKey, 
+        limitAmount: limit, 
+        latestRoast: null,
+        roastLevel,
+        roastPersona
+      },
     });
 
     revalidatePath("/");
@@ -74,4 +89,16 @@ export async function setBudget(
     const msg = err instanceof Error ? err.message : "Unknown error";
     return { success: false, message: `Gagal menyimpan budget: ${msg}` };
   }
+}
+
+import { cookies } from "next/headers";
+
+export async function skipBudgetSetup() {
+  const monthKey = monthFormatter.format(new Date());
+  // Set cookie for 24 hours
+  const cookieStore = await cookies();
+  cookieStore.set(`skip_budget_${monthKey}`, "true", { 
+    maxAge: 60 * 60 * 24 
+  });
+  revalidatePath("/");
 }

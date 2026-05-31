@@ -11,8 +11,7 @@ import { ProfileSettingsForm } from "@/components/profile-settings-form";
 import { CustomCategoryManager } from "@/components/custom-category-manager";
 import { getUserCategories } from "@/actions/category-actions";
 
-const monthFormatter = new Intl.DateTimeFormat("id-ID", { month: "2-digit", year: "numeric" });
-const monthLabelFormatter = new Intl.DateTimeFormat("id-ID", { month: "long", year: "numeric" });
+import { monthFormatter, monthLabelFormatter } from "@/lib/date-utils";
 
 export default async function SettingsPage() {
   const userId = await requireOnboarding();

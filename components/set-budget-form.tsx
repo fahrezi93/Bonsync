@@ -11,6 +11,8 @@ interface SetBudgetFormProps {
   monthLabel: string;
   /** Optional callback fired once after a successful save. */
   onSaved?: () => void;
+  hideHeader?: boolean;
+  hideCard?: boolean;
 }
 
 /** Format angka jadi "1.000.000" (titik = pemisah ribuan Indonesia) */
@@ -56,7 +58,7 @@ const idr = new Intl.NumberFormat("id-ID", {
   maximumFractionDigits: 0,
 });
 
-export function SetBudgetForm({ currentLimit, monthLabel, onSaved }: SetBudgetFormProps) {
+export function SetBudgetForm({ currentLimit, monthLabel, onSaved, hideHeader, hideCard }: SetBudgetFormProps) {
   const [state, formAction, pending] = useActionState(setBudget, initialState);
   const inputRef = useRef<HTMLInputElement>(null);
   const pendingCaretDigitsRef = useRef<number | null>(null);
@@ -146,24 +148,26 @@ export function SetBudgetForm({ currentLimit, monthLabel, onSaved }: SetBudgetFo
   const isEditMode = typeof effectiveLimit === "number";
 
   // Validasi client-side untuk preview
-  const isValid = numericValue > 0 && numericValue <= 1_000_000_000;
+  const isValid = numericValue >= 10000 && numericValue <= 1_000_000_000;
   const showPreview = displayVal.length > 0 && isValid;
 
   return (
     <div
-      className="w-full premium-card p-6 md:p-8 relative overflow-hidden transition-all duration-300"
+      className={`w-full relative overflow-hidden transition-all duration-300 ${!hideCard ? "premium-card p-6 md:p-8" : ""}`}
       suppressHydrationWarning
     >
 
       {/* Header */}
-      <div className="mb-6 flex flex-col gap-1 animate-fade-in-up" suppressHydrationWarning>
-        <div suppressHydrationWarning>
-          <h1 className="text-xl md:text-2xl font-bold tracking-tight text-slate-800">
-            {isEditMode ? "Budget Bulanan" : "Set Budget Bulan Ini"}
-          </h1>
-          <p className="text-sm font-medium text-slate-500">{monthLabel}</p>
+      {!hideHeader && (
+        <div className="mb-6 flex flex-col gap-1 animate-fade-in-up" suppressHydrationWarning>
+          <div suppressHydrationWarning>
+            <h1 className="text-xl md:text-2xl font-bold tracking-tight text-slate-800">
+              {isEditMode ? "Budget Bulanan" : "Set Budget Bulan Ini"}
+            </h1>
+            <p className="text-sm font-medium text-slate-500">{monthLabel}</p>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Info jika belum ada budget */}
       {!isEditMode && (
@@ -211,7 +215,7 @@ export function SetBudgetForm({ currentLimit, monthLabel, onSaved }: SetBudgetFo
             <p className="mt-2 text-xs text-rose-500 font-semibold pl-1">
               {numericValue > 1_000_000_000
                 ? "Maksimal Rp 1.000.000.000"
-                : "Masukkan angka yang valid"}
+                : "Minimal Rp 10.000"}
             </p>
           ) : null}
         </div>

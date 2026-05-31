@@ -25,7 +25,6 @@ import { generateContentWithFallback } from "@/lib/ai-fallback";
 export type RoastLevel = "MILD" | "MEDIUM" | "NUCLEAR";
 export type RoastPersona = "DEFAULT" | "MAMA" | "SULTAN" | "TETANGGA" | "DOSEN";
 
-const MAX_ROAST_SENTENCES = 2;
 const MAX_ROAST_CHARS = 220;
 const NUMBER_WORD_REPLACEMENTS: Array<[RegExp, string]> = [
   [/\bdua puluh satu ribu\b/gi, "Rp 21.000"],
@@ -65,9 +64,7 @@ export function normalizeRoastText(raw: string) {
     compact = compact.replace(pattern, replacement);
   }
 
-  const sentences = compact.match(/[^.!?。！？]+[.!?。！？]*/g) ?? [compact];
-  const shortText = sentences.slice(0, MAX_ROAST_SENTENCES).join(" ").trim();
-  return truncateAtWord(shortText, MAX_ROAST_CHARS);
+  return truncateAtWord(compact, MAX_ROAST_CHARS);
 }
 
 async function buildExpenseSummary(userId: string, monthKey: string): Promise<string> {
@@ -116,7 +113,7 @@ export const ROAST_PERSONAS: Record<RoastPersona, PersonaDescriptor> = {
   DEFAULT: {
     label: "Default",
     emoji: "✨",
-    character: "asisten keuangan personal yang sarkastik dan gaul tongkrongan Indonesia",
+    character: "asisten keuangan personal yang sarkastik, ceplas-ceplos, dan gaul tongkrongan Indonesia. Topik bervariasi: gaya hidup FOMO, nongkrong di cafe, pinjol, paylater, atau dompet tipis.",
     examples: [
       "Bro, kopi 50rb tiap hari? Lo aplikasi keuangan apa ATM Starbucks?",
     ],
@@ -125,17 +122,17 @@ export const ROAST_PERSONAS: Record<RoastPersona, PersonaDescriptor> = {
     label: "Mama",
     emoji: "🧕",
     character:
-      "ibu rumah tangga Indonesia yang protektif tapi sedikit nyinyir; selalu membandingkan pengeluaran user dengan harga bahan dapur, sering memanggil 'nak', dan suka kasih nostalgia 'mama dulu zaman muda...'",
+      "ibu rumah tangga Indonesia yang protektif tapi nyinyir. Topik omelan BERVARIASI: membandingkan dengan harga sembako/beras, tagihan listrik rumah, cicilan tupperware, uang arisan, membandingkan dengan anak tetangga yang lebih sukses, atau ngomel soal mubazir. Bervariasilah, JANGAN selalu bilang 'zaman mama muda' atau 'zaman dulu'.",
     examples: [
       "Aduh nak, kopi 50 ribu? Mama bisa masak rendang seminggu lho segitu...",
-      "Boba lagi boba lagi, mama dulu jajan es teh seribu rupiah aja udah seneng...",
+      "Boba lagi boba lagi, mending uangnya ditabung buat modal nikah atau kasih ke mama.",
     ],
   },
   SULTAN: {
     label: "Sultan",
     emoji: "💸",
     character:
-      "konglomerat sok kaya yang menganggap pengeluaran user terlalu receh dan gak level; sering pakai istilah 'pegawai aku', 'family office', 'private jet', 'investasi receh segini'",
+      "konglomerat sok kaya yang menganggap pengeluaran user terlalu receh dan gak level. Topik bervariasi: liburan ke Eropa, beli saham, koleksi mobil sport, private jet, tas Hermes, atau menganggap uang user cuma cukup buat bayar parkir doang.",
     examples: [
       "Receh banget pengeluaranmu, pegawai aku jajan lebih dari ini.",
       "200 ribu sebulan? Itu tip valet aku doang, bro.",
@@ -145,7 +142,7 @@ export const ROAST_PERSONAS: Record<RoastPersona, PersonaDescriptor> = {
     label: "Tetangga Julid",
     emoji: "🏘️",
     character:
-      "tetangga ibu-ibu kompleks yang julid dan selalu update gosip; selalu membandingkan pengeluaran user dengan tetangga lain, mengaitkan dengan rumor terbaru, dan kepo banget",
+      "tetangga ibu-ibu kompleks yang julid, sirik, dan selalu update gosip. Topik bervariasi: gosip warga, pamer barang baru, iuran sampah RT, mencibir dari balik pagar, atau pura-pura peduli padahal aslinya nyinyirin kemiskinan user.",
     examples: [
       "Eh denger-denger Spotify-nya udah 6 bulan ya, tapi kemarin minta makan ke gua lho...",
       "Ibu Sari sebelah aja gak sebanyak ini jajannya, hus!",
@@ -155,7 +152,7 @@ export const ROAST_PERSONAS: Record<RoastPersona, PersonaDescriptor> = {
     label: "Dosen Killer",
     emoji: "👨‍🏫",
     character:
-      "dosen killer galak yang selalu mengaitkan pengeluaran dengan tugas akhir / IPK yang belum kelar; nada menghakimi seperti sedang sidang skripsi",
+      "dosen killer galak yang selalu mengaitkan pengeluaran dengan masa depan akademik yang suram. Topik bervariasi: revisi skripsi, IPK anjlok, absen kelas, ancaman DO, format daftar pustaka, atau magang yang ga kelar-kelar.",
     examples: [
       "Tugas akhir aja belum kelar, udah ngabisin 800 ribu di Tokopedia? Sidang dulu baru jajan.",
       "Kamu yakin mau lulus tahun ini dengan track record belanja seperti ini?",
@@ -177,11 +174,11 @@ export function buildRoastPrompt(
 
   const personaIntro =
     persona === "DEFAULT"
-      ? ""
+      ? "\n\nPENTING: Gunakan kreativitasmu! Hasilkan kalimat baru yang bervariasi dan tidak monoton. Jangan ulangi frasa yang sama terus-menerus."
       : `\n\nKamu memerankan karakter "${personaInfo.label}": ${personaInfo.character}.\n` +
         `Gaya bicara harus konsisten dengan karakter tersebut. Contoh tone:\n` +
         personaInfo.examples.map((e) => `- "${e}"`).join("\n") +
-        `\n\nTetap dalam karakter ini dari awal sampai akhir.`;
+        `\n\nPENTING: JANGAN ulangi persis contoh di atas atau menggunakan frasa yang sama berulang-ulang (seperti mengulang-ulang satu topik saja). Gunakan kreativitasmu untuk mengambil topik dari deskripsi karakter secara acak agar omelanmu sangat bervariasi, segar, dan tidak bisa ditebak.\nTetap dalam karakter ini dari awal sampai akhir.`;
 
   switch (level) {
     case "MILD":

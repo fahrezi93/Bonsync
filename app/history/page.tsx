@@ -25,6 +25,7 @@ const dateFormatter = new Intl.DateTimeFormat("id-ID", {
   year: "numeric",
   hour: "2-digit",
   minute: "2-digit",
+  timeZone: "Asia/Jakarta",
 });
 
 const SOURCE_CONFIG: Record<string, { label: string; className: string }> = {

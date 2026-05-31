@@ -531,7 +531,7 @@ export function ScanFlow() {
                 />
 
                 {/* Floating Action Buttons */}
-                <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-3 px-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-3 px-4 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300">
                   <label
                     htmlFor="receipt-camera"
                     className="cursor-pointer flex items-center justify-center gap-2 bg-white/90 backdrop-blur-md border border-slate-200 text-slate-700 hover:text-emerald-600 hover:border-emerald-300 rounded-full px-4 py-2.5 text-xs font-bold shadow-sm transition-all flex-1 max-w-[140px]"

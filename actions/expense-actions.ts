@@ -65,10 +65,7 @@ const idrFormatter = new Intl.NumberFormat("id-ID", {
   maximumFractionDigits: 0,
 });
 
-const monthFormatter = new Intl.DateTimeFormat("id-ID", {
-  month: "2-digit",
-  year: "numeric",
-});
+import { monthFormatter } from "@/lib/date-utils";
 
 function formatRupiah(value: number): string {
   return idrFormatter.format(value);

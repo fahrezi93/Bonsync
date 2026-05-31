@@ -13,10 +13,8 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import Link from "next/link";
 import { Utensils, Car, ShoppingBag, Receipt, ChevronRight, Wallet } from "lucide-react";
-
-const monthFormatter = new Intl.DateTimeFormat("id-ID", { month: "2-digit", year: "numeric" });
-const monthLabelFormatter = new Intl.DateTimeFormat("id-ID", { month: "long", year: "numeric" });
-const shortDateFormatter = new Intl.DateTimeFormat("id-ID", { dateStyle: "short" });
+import { cookies } from "next/headers";
+import { monthFormatter, monthLabelFormatter, getJakartaMonthStart } from "@/lib/date-utils";
 
 const idr = new Intl.NumberFormat("id-ID", {
   style: "currency",
@@ -42,7 +40,9 @@ async function getDashboard() {
   });
 
   const monthKey = monthFormatter.format(new Date());
-  const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  const monthStart = getJakartaMonthStart();
+  const cookieStore = await cookies();
+  const skippedNewMonth = cookieStore.get("skip_budget_" + monthKey)?.value === "true";
 
   const [budget, expenses, customCategories] = await Promise.all([
     prisma.monthlyBudget.findUnique({ where: { userId_month: { userId, month: monthKey } } }),
@@ -56,9 +56,14 @@ async function getDashboard() {
     }),
   ]);
 
-  if (!budget) {
+  if ((!budget || budget.limitAmount === 0) && !skippedNewMonth) {
+    const previousBudgetCount = await prisma.monthlyBudget.count({
+      where: { userId }
+    });
+
     return {
       needsBudget: true,
+      isReturningUser: previousBudgetCount > 0,
       monthKey,
       monthLabel: monthLabelFormatter.format(new Date()),
       userId,
@@ -66,7 +71,8 @@ async function getDashboard() {
     };
   }
 
-  const budgetLimit = budget.limitAmount;
+  // Jika dilewati sementara (skippedNewMonth), anggap limit 0 agar dasbor tetap bisa dibuka
+  const budgetLimit = budget ? budget.limitAmount : 0;
   const spent = expenses.reduce((sum, expense) => sum + expense.totalAmount, 0);
   const remaining = Math.max(0, budgetLimit - spent);
   const survivalScore = budgetLimit > 0 ? (remaining / budgetLimit) * 100 : 0;
@@ -83,10 +89,11 @@ async function getDashboard() {
 
   // Ambil cached roast dari DB (tidak generate AI disini)
   // getMonthlyRoasting akan generate AI hanya jika latestRoast = null
-  const roastText = budget.latestRoast;
+  const roastText = budget?.latestRoast;
 
   return {
     needsBudget: false,
+    isSkippedBudget: budgetLimit === 0,
     monthLabel: monthLabelFormatter.format(new Date()),
     budgetLimit,
     spent,
@@ -145,23 +152,49 @@ export default async function HomePage() {
   }
 
   if (data.needsBudget) {
-    // Belum onboarding → redirect ke route onboarding terpisah supaya
-    // server action di tiap step bisa revalidate tanpa unmount client component.
-    redirect("/onboarding");
+    if (data.isReturningUser) {
+      redirect("/new-month");
+    } else {
+      // Belum onboarding → redirect ke route onboarding terpisah supaya
+      // server action di tiap step bisa revalidate tanpa unmount client component.
+      redirect("/onboarding");
+    }
   }
 
-  const score = data.survivalScore!;
-  const danger = score < 30;
+  const score = data.survivalScore ?? 0;
+  const isCritical = score < 20;
   const warning = score < 60 && score >= 30;
 
-  const statusLabel = danger
+  const statusLabel = isCritical
     ? '🚨 Kritis! Dompet hampir kosong'
     : warning
       ? '⚠️ Waspada, mulai hemat'
       : '✅ Aman, budget masih terkontrol';
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 py-8 pb-32 md:pb-16 flex flex-col gap-6 flex-1 min-h-0 overflow-y-auto hide-scrollbar">
+    <div className="mx-auto w-full max-w-md md:max-w-5xl px-4 py-8 pb-32 md:pb-16 flex flex-col gap-6 flex-1 min-h-0 overflow-y-auto hide-scrollbar">
+      
+      {data.isSkippedBudget && (
+          <div className="mb-6 rounded-2xl bg-amber-50 border border-amber-200 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in-up">
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-amber-100 rounded-xl shrink-0">
+                <Wallet className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-amber-900">Belum Set Budget Bulan Ini</h3>
+                <p className="text-xs font-medium text-amber-700/80 mt-0.5">
+                  Anda melewati pengaturan budget. Set sekarang agar bisa memantau sisa uang.
+                </p>
+              </div>
+            </div>
+            <Link 
+              href="/new-month" 
+              className="inline-flex items-center justify-center whitespace-nowrap rounded-xl bg-amber-500 px-4 py-2 text-xs font-bold text-white hover:bg-amber-600 transition-colors shrink-0"
+            >
+              Set Budget
+            </Link>
+          </div>
+        )}
 
       <div className="hidden md:flex flex-col gap-1 mb-2 animate-fade-in-up">
         <h1 className="text-2xl font-bold tracking-tight text-slate-800">Dashboard</h1>
@@ -169,7 +202,7 @@ export default async function HomePage() {
       </div>
 
       {/* Budget alert banner */}
-      {danger && (
+      {isCritical && (
         <div className="premium-card p-4 md:p-5 flex items-center gap-4 border-rose-200 bg-rose-50/50 animate-fade-in-up">
           <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-600">
             <Wallet className="size-5" />
@@ -227,8 +260,8 @@ export default async function HomePage() {
                </p>
             </div>
             
-            <div className={`mt-auto pt-4 border-t border-slate-100 flex items-center gap-2 text-xs font-bold tracking-wide ${danger ? 'text-rose-600' : warning ? 'text-amber-600' : 'text-emerald-600'}`}>
-              <div className={`h-2 w-2 rounded-full ${danger ? 'bg-rose-500 animate-pulse' : warning ? 'bg-amber-500' : 'bg-emerald-500'}`}></div>
+            <div className={`mt-auto pt-4 border-t border-slate-100 flex items-center gap-2 text-xs font-bold tracking-wide ${isCritical ? 'text-rose-600' : warning ? 'text-amber-600' : 'text-emerald-600'}`}>
+              <div className={`h-2 w-2 rounded-full ${isCritical ? 'bg-rose-500 animate-pulse' : warning ? 'bg-amber-500' : 'bg-emerald-500'}`}></div>
               {statusLabel}
             </div>
           </div>
@@ -284,7 +317,7 @@ export default async function HomePage() {
           </Suspense>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 gap-6">
-              <div className="premium-card p-6 flex flex-col justify-center items-center animate-fade-in-up h-[320px] sm:h-auto min-h-[300px]" style={{ animationDelay: '200ms' }}>
+              <div className="premium-card p-6 flex flex-col justify-center items-center animate-fade-in-up h-auto min-h-[320px]" style={{ animationDelay: '200ms' }}>
                 <div className="flex w-full items-center justify-between mb-4">
                    <h3 className="text-sm font-bold text-slate-700">Sebaran Pengeluaran</h3>
                    <div className="flex size-8 items-center justify-center bg-slate-50 border border-slate-100 rounded-full">

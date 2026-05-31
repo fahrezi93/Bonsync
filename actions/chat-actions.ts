@@ -33,7 +33,7 @@ export interface SaveChatExpenseResult {
 
 import { generateContentWithFallback } from "@/lib/ai-fallback";
 
-const monthFormatter = new Intl.DateTimeFormat("id-ID", { month: "2-digit", year: "numeric" });
+import { monthFormatter } from "@/lib/date-utils";
 
 async function callGemini(prompt: string, schema?: object): Promise<string> {
   const res = await generateContentWithFallback({

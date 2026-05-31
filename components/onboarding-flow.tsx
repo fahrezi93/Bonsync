@@ -165,6 +165,8 @@ export function OnboardingFlow({ monthLabel }: OnboardingFlowProps) {
 }
 
 /* ─── Step 1: budget — pakai callback onSaved langsung ─── */
+import { skipBudgetSetup } from "@/actions/budget-actions";
+
 function BudgetStep({
   monthLabel,
   onSaved,
@@ -172,19 +174,43 @@ function BudgetStep({
   monthLabel: string;
   onSaved: () => void;
 }) {
+  const [isPending, startTransition] = useTransition();
+
   // Tambahkan delay 800ms supaya user sempat lihat pesan sukses sebelum
   // berpindah ke step selanjutnya.
   function handleSaved() {
     setTimeout(() => onSaved(), 800);
   }
 
+  function handleSkip() {
+    startTransition(async () => {
+      await skipBudgetSetup();
+      onSaved();
+    });
+  }
+
   return (
     <div className="flex flex-col gap-3">
-      <SetBudgetForm
-        monthLabel={monthLabel}
-        onSaved={handleSaved}
-      />
-      <p className="text-center text-xs font-medium text-slate-500 px-2">
+      <div className="premium-card p-6 border-emerald-100">
+        <SetBudgetForm
+          monthLabel={monthLabel}
+          onSaved={handleSaved}
+          hideCard={true}
+        />
+        
+        <div className="mt-6 border-t border-slate-100 pt-6 text-center">
+          <p className="text-sm font-medium text-slate-500 mb-3">Belum gajian?</p>
+          <button
+            onClick={handleSkip}
+            disabled={isPending}
+            className="text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors disabled:opacity-50"
+          >
+            {isPending ? "Melewati..." : "Lewati sementara"}
+          </button>
+        </div>
+      </div>
+
+      <p className="text-center text-xs font-medium text-slate-500 px-2 mt-2">
         Setelah simpan budget, kamu akan lanjut ke pengaturan AI roasting.
       </p>
     </div>
